@@ -1,0 +1,115 @@
+claude 4.5 sonnet
+
+Core Terms:
+- "preeclampsia" / "pre-eclampsia" / "pre eclampsia"
+- "eclampsia"
+- "HELLP syndrome"
+- "gestational hypertension"
+- "toxemia"
+- "pregnancy-induced hypertension" / "PIH"
+- "superimposed preeclampsia"
+
+Symptoms & Signs:
+- "high blood pressure pregnancy"
+- "protein in urine pregnancy" / "proteinuria"
+- "severe swelling pregnancy" / "edema pregnancy"
+- "vision changes pregnancy" / "blurred vision"
+- "right upper quadrant pain"
+- "severe headache pregnancy"
+- "elevated liver enzymes"
+
+Monitoring & Treatment:
+- "magnesium sulfate" / "mag sulfate"
+- "24-hour urine collection"
+- "early delivery" / "premature birth"
+- "induced labor preeclampsia"
+- "NST monitoring"
+- "blood pressure monitoring"
+
+Outcomes & Complications:
+- "preterm delivery"
+- "NICU admission"
+- "postpartum preeclampsia"
+- "emergency c-section"
+
+gemini 2.5 pro
+
+Core Terms:
+- preeclampsia
+- pre-eclampsia
+- toxemia
+- HELLP
+- Eclampsia
+- Postpartum preeclampsia
+- High BP
+
+Symptoms & Signs:
+- High blood pressure
+- Swelling
+- Headache
+- Protein in urine
+- Proteinuria
+- Blurry vision / Seeing spots
+- Upper abdominal pain / Rib pain
+- Elevated liver enzymes
+
+Monitoring & Treatment:
+- Magnesium sulfate
+- Mag drip
+- Labetalol
+- Nifedipine / Procardia
+- Bed rest
+- Induction / Induced
+- Early delivery
+
+Diagnostic & Experiential:
+- Diagnosed with preeclampsia
+- Signs of preeclampsia
+- Worried about preeclampsia
+- 24-hour urine
+- Non-stress test / NST
+
+gpt-5
+
+Core Terms:
+- "preeclampsia"
+- "pre-eclampsia"
+- "eclampsia"
+- "HELLP syndrome"
+- "gestational hypertension"
+- "high blood pressure during pregnancy"
+- "protein in urine"
+
+Symptoms & Signs:
+- "swelling"
+- "headache"
+- "vision problems"
+- "dizziness"
+- "blurred vision"
+- "upper abdominal pain"
+- "nausea"
+- "edema"
+
+Monitoring & Treatment:
+- "magnesium sulfate"
+- "bed rest"
+- "induced labor"
+- "C-section"
+- "monitoring blood pressure"
+- "prenatal checkups"
+
+Emotional & Social:
+- "scared"
+- "anxious"
+- "doctor didn't listen"
+- "NICU baby"
+- "support group"
+- "recovery"
+- "postpartum"
+- "birth story"
+
+Broader Context:
+- "third trimester"
+- "high-risk pregnancy"
+- "complications"
+- "hospital stay"

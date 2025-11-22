@@ -1,0 +1,38 @@
+claude 4.5 sonnet
+
+r/preeclampsia - Primary subreddit dedicated to pre-eclampsia
+r/BabyBumps - General pregnancy community (very active)
+r/PregnancyAfter35 - Higher risk demographic for pre-eclampsia
+r/pregnant - Large general pregnancy subreddit
+r/CautiousBB - Pregnancy after loss/complications
+r/Mommit - General motherhood discussions
+r/beyondthebump - Postpartum experiences (many retrospective stories)
+r/BabyBumpsandBeyondAu - Australian pregnancy community
+r/NICUParents - Often involves pre-eclampsia complications
+r/ParentingInBulk - Multiple pregnancies (higher pre-eclampsia risk)
+
+gemini 2.5 pro
+
+r/preeclampsia - The most direct source
+r/BabyBumps - A very large and active community for all stages of pregnancy
+r/pregnant - Large, general pregnancy subreddit where users share concerns, symptoms, and experiences
+r/beyondthebump - Crucial for capturing discussions on postpartum pre-eclampsia
+r/highriskpregnancy - Specifically for users facing high-risk pregnancies
+r/birthstories - Detailed accounts of labor and delivery, frequently include complications
+r/NICUparents - Parents discuss maternal health issues that led to NICU stay
+r/GestationalDiabetes - Overlapping discussions and high-risk concerns
+r/AskDocs - Users describing symptoms before official diagnosis
+r/InfertilityBabies - Pregnancies from infertility treatments, monitored more closely
+
+gpt-5
+
+r/preeclampsia - Dedicated discussions and personal experiences
+r/BabyBumps - Large pregnancy community with many posts about complications
+r/pregnancy - General pregnancy experiences, including high blood pressure cases
+r/TwoXChromosomes - Broader women's health discussions
+r/Parenting - Postpartum reflections on pre-eclampsia and maternal recovery
+r/ObGyn - Clinical and student discussions, medical viewpoints
+r/Mommit - Motherhood support group, emotional and personal narratives
+r/AskDocs - Posts seeking medical advice, symptom and concern patterns
+r/Infertility - Pregnancy complications after treatment
+r/Nursing - Medical professionals discussing patient care and risk management

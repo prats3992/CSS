@@ -1,0 +1,16 @@
+# For python
+*.pyc
+__pycache__/
+# For virtual environments
+venv/
+.env/
+# For IDEs
+.vscode/
+.idea/
+# For Firebase service account keys
+*.json
+# Ignore environment variable files
+.env
+*.csv
+cleaning_summary*txt
+*zip
