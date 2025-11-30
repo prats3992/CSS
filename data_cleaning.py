@@ -1,417 +1,343 @@
 """
-Data Cleaning and Preprocessing for Pre-eclampsia Reddit Data
-Uses NLTK, spaCy, and other NLP tools
+Data Cleaning and Preprocessing Module
+Loads data from Firebase, cleans text, handles missing values, removes duplicates
 """
 
 import pandas as pd
 import numpy as np
 import re
-import json
-from datetime import datetime
-from tqdm import tqdm
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.stem import WordNetLemmatizer, PorterStemmer
 import emoji
 import contractions
 from firebase_manager import FirebaseManager
-import warnings
-warnings.filterwarnings('ignore')
+from datetime import datetime
+import json
 
 class DataCleaner:
     def __init__(self):
-        """Initialize the data cleaner with necessary NLTK resources"""
+        """Initialize the data cleaner with Firebase connection"""
         self.firebase = FirebaseManager()
-        self.lemmatizer = WordNetLemmatizer()
-        self.stemmer = PorterStemmer()
         
-        # Download required NLTK data
-        self._download_nltk_resources()
-        
-        # Medical terms to preserve (don't remove these as stopwords)
-        self.medical_preserve_terms = {
-            'preeclampsia', 'pre-eclampsia', 'eclampsia', 'hellp', 'toxemia',
-            'gestational', 'hypertension', 'proteinuria', 'edema', 'seizure',
-            'magnesium', 'sulfate', 'delivery', 'nicu', 'postpartum', 'prenatal',
-            'trimester', 'bp', 'blood pressure', 'protein', 'urine', 'swelling',
-            'headache', 'vision', 'liver', 'enzymes', 'platelets', 'induced',
-            'emergency', 'c-section', 'premature', 'preterm', 'maternal'
-        }
-        
-        # Get stopwords but preserve medical terms
-        self.stop_words = set(stopwords.words('english'))
-        self.stop_words = self.stop_words - self.medical_preserve_terms
-        
-    def _download_nltk_resources(self):
-        """Download necessary NLTK resources"""
-        resources = ['punkt', 'punkt_tab', 'stopwords', 'wordnet', 'averaged_perceptron_tagger', 'omw-1.4']
-        
-        print("Downloading NLTK resources...")
-        for resource in resources:
-            try:
-                nltk.download(resource, quiet=True)
-            except:
-                print(f"  Warning: Could not download {resource}")
-        print("✓ NLTK resources ready\n")
-    
     def load_data_from_firebase(self):
-        """Load posts and comments from Firebase into DataFrames"""
-        print("\n" + "="*60)
-        print("LOADING DATA FROM FIREBASE")
-        print("="*60 + "\n")
+        """
+        Load posts and comments from Firebase
+        
+        Returns:
+            tuple: (posts_df, comments_df)
+        """
+        print("Loading data from Firebase...")
         
         # Get posts
         posts_ref = self.firebase.db.child('reddit_posts').get()
-        
-        if not posts_ref:
-            print("No posts found in Firebase")
-            return None, None
-        
-        # Convert to DataFrame
         posts_list = []
-        for post_id, post_data in posts_ref.items():
-            posts_list.append(post_data)
         
-        posts_df = pd.DataFrame(posts_list)
-        print(f"✓ Loaded {len(posts_df)} posts")
+        if posts_ref:
+            for post_id, post_data in posts_ref.items():
+                post_data['id'] = post_id
+                posts_list.append(post_data)
         
-        # Get comments if available
+        # Get comments
         comments_ref = self.firebase.db.child('reddit_comments').get()
-        comments_df = None
+        comments_list = []
         
         if comments_ref:
-            comments_list = []
             for comment_id, comment_data in comments_ref.items():
+                comment_data['id'] = comment_id
                 comments_list.append(comment_data)
-            comments_df = pd.DataFrame(comments_list)
-            print(f"✓ Loaded {len(comments_df)} comments")
-        else:
-            print("No comments found in Firebase")
+        
+        posts_df = pd.DataFrame(posts_list) if posts_list else pd.DataFrame()
+        comments_df = pd.DataFrame(comments_list) if comments_list else pd.DataFrame()
+        
+        print(f"Loaded {len(posts_df)} posts and {len(comments_df)} comments")
         
         return posts_df, comments_df
     
-    def clean_text(self, text, remove_urls=True, remove_emojis=True, 
-                   expand_contractions=True, lowercase=True):
+    def clean_text(self, text):
         """
         Clean and normalize text
         
         Args:
-            text: Input text
-            remove_urls: Remove URLs
-            remove_emojis: Remove emoji characters
-            expand_contractions: Expand contractions (don't -> do not)
-            lowercase: Convert to lowercase
+            text (str): Raw text
+            
+        Returns:
+            str: Cleaned text
         """
-        if pd.isna(text) or text == '':
-            return ''
+        if pd.isna(text) or not isinstance(text, str):
+            return ""
         
+        # Convert to string if not already
         text = str(text)
         
-        # Remove [deleted], [removed] markers
-        text = re.sub(r'\[deleted\]|\[removed\]', '', text)
+        # Expand contractions
+        text = contractions.fix(text)
         
-        # Expand contractions (don't -> do not)
-        if expand_contractions:
-            try:
-                text = contractions.fix(text)
-            except:
-                pass
+        # Convert emojis to text descriptions
+        text = emoji.demojize(text, delimiters=(" ", " "))
         
         # Remove URLs
-        if remove_urls:
-            text = re.sub(r'http\S+|www\.\S+', '', text)
-            text = re.sub(r'r/\w+', '', text)  # Remove subreddit mentions
-            text = re.sub(r'u/\w+', '', text)  # Remove user mentions
+        text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
         
-        # Handle emojis
-        if remove_emojis:
-            text = emoji.replace_emoji(text, replace='')
-        else:
-            # Convert emojis to text descriptions
-            text = emoji.demojize(text, delimiters=(" ", " "))
+        # Remove Reddit-specific formatting
+        text = re.sub(r'\[deleted\]|\[removed\]', '', text)
         
-        # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip()
+        # Remove excessive whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
         
-        # Convert to lowercase (preserving medical terms if needed)
-        if lowercase:
-            text = text.lower()
+        # Remove excessive punctuation
+        text = re.sub(r'([!?.]){2,}', r'\1', text)
         
         return text
     
-    def remove_stopwords(self, text, preserve_medical=True):
+    def parse_timestamp(self, timestamp):
         """
-        Remove stopwords while preserving medical terms
+        Parse various timestamp formats to datetime
         
         Args:
-            text: Input text
-            preserve_medical: Keep medical terms even if they're stopwords
-        """
-        if not text:
-            return ''
-        
-        tokens = word_tokenize(text.lower())
-        
-        if preserve_medical:
-            filtered_tokens = [
-                word for word in tokens 
-                if word not in self.stop_words or word in self.medical_preserve_terms
-            ]
-        else:
-            filtered_tokens = [word for word in tokens if word not in self.stop_words]
-        
-        return ' '.join(filtered_tokens)
-    
-    def lemmatize_text(self, text):
-        """Lemmatize text to base forms"""
-        if not text:
-            return ''
-        
-        tokens = word_tokenize(text.lower())
-        lemmatized = [self.lemmatizer.lemmatize(token) for token in tokens]
-        return ' '.join(lemmatized)
-    
-    def stem_text(self, text):
-        """Apply stemming to text"""
-        if not text:
-            return ''
-        
-        tokens = word_tokenize(text.lower())
-        stemmed = [self.stemmer.stem(token) for token in tokens]
-        return ' '.join(stemmed)
-    
-    def extract_medical_terms(self, text):
-        """Extract medical terms from text"""
-        if not text:
-            return []
-        
-        text_lower = text.lower()
-        found_terms = []
-        
-        for term in self.medical_preserve_terms:
-            if term in text_lower:
-                found_terms.append(term)
-        
-        return found_terms
-    
-    def calculate_text_statistics(self, text):
-        """Calculate various text statistics"""
-        if pd.isna(text) or text == '':
-            return {
-                'char_count': 0,
-                'word_count': 0,
-                'sentence_count': 0,
-                'avg_word_length': 0,
-                'question_mark_count': 0,
-                'exclamation_count': 0
-            }
-        
-        text = str(text)
-        sentences = sent_tokenize(text)
-        words = word_tokenize(text)
-        
-        return {
-            'char_count': len(text),
-            'word_count': len(words),
-            'sentence_count': len(sentences),
-            'avg_word_length': np.mean([len(word) for word in words]) if words else 0,
-            'question_mark_count': text.count('?'),
-            'exclamation_count': text.count('!')
-        }
-    
-    def process_posts(self, posts_df):
-        """
-        Clean and preprocess posts data
-        
+            timestamp: Unix timestamp or ISO string
+            
         Returns:
-            DataFrame with cleaned data and new features
+            datetime: Parsed datetime object
         """
-        print("\n" + "="*60)
-        print("PROCESSING POSTS")
-        print("="*60 + "\n")
+        if pd.isna(timestamp):
+            return None
         
-        df = posts_df.copy()
-        
-        # Combine title and selftext
-        print("Combining title and selftext...")
-        df['full_text'] = df['title'].fillna('') + ' ' + df['selftext'].fillna('')
-        
-        # Clean text - multiple versions for different use cases
-        print("Cleaning text...")
-        tqdm.pandas(desc="Basic cleaning")
-        df['text_cleaned'] = df['full_text'].progress_apply(
-            lambda x: self.clean_text(x, remove_urls=True, expand_contractions=True)
-        )
-        
-        # Version without stopwords
-        print("\nRemoving stopwords...")
-        tqdm.pandas(desc="Stopword removal")
-        df['text_no_stopwords'] = df['text_cleaned'].progress_apply(
-            lambda x: self.remove_stopwords(x, preserve_medical=True)
-        )
-        
-        # Lemmatized version
-        print("\nLemmatizing...")
-        tqdm.pandas(desc="Lemmatization")
-        df['text_lemmatized'] = df['text_cleaned'].progress_apply(self.lemmatize_text)
-        
-        # Extract medical terms
-        print("\nExtracting medical terms...")
-        tqdm.pandas(desc="Medical term extraction")
-        df['medical_terms'] = df['full_text'].progress_apply(self.extract_medical_terms)
-        df['medical_term_count'] = df['medical_terms'].apply(len)
-        
-        # Calculate text statistics
-        print("\nCalculating text statistics...")
-        tqdm.pandas(desc="Text statistics")
-        text_stats = df['full_text'].progress_apply(self.calculate_text_statistics)
-        stats_df = pd.DataFrame(text_stats.tolist())
-        df = pd.concat([df, stats_df], axis=1)
-        
-        # Add temporal features
-        print("\nAdding temporal features...")
-        df['created_datetime'] = pd.to_datetime(df['created_utc'], unit='s')
-        df['year'] = df['created_datetime'].dt.year
-        df['month'] = df['created_datetime'].dt.month
-        df['day_of_week'] = df['created_datetime'].dt.dayofweek
-        df['hour'] = df['created_datetime'].dt.hour
-        
-        # Engagement metrics
-        df['engagement_ratio'] = df['num_comments'] / (df['score'] + 1)
-        
-        print(f"\n✓ Processed {len(df)} posts")
-        return df
+        try:
+            # Try Unix timestamp
+            if isinstance(timestamp, (int, float)):
+                return datetime.fromtimestamp(timestamp)
+            
+            # Try ISO string
+            if isinstance(timestamp, str):
+                return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                
+        except Exception as e:
+            print(f"Error parsing timestamp {timestamp}: {e}")
+            return None
     
-    def save_cleaned_data(self, posts_df, comments_df=None, output_format='csv'):
+    def clean_posts(self, posts_df):
         """
-        Save cleaned data to files
+        Clean posts dataframe
         
         Args:
-            posts_df: Cleaned posts DataFrame
-            comments_df: Cleaned comments DataFrame (optional)
-            output_format: 'csv', 'json', or 'both'
+            posts_df (DataFrame): Raw posts data
+            
+        Returns:
+            DataFrame: Cleaned posts data
         """
-        print("\n" + "="*60)
-        print("SAVING CLEANED DATA")
-        print("="*60 + "\n")
+        if posts_df.empty:
+            print("No posts to clean")
+            return posts_df
         
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        print("\nCleaning posts data...")
+        print(f"Initial posts: {len(posts_df)}")
         
-        if output_format in ['csv', 'both']:
-            posts_file = f'cleaned_posts_{timestamp}.csv'
-            posts_df.to_csv(posts_file, index=False, encoding='utf-8')
-            print(f"✓ Saved posts to {posts_file}")
-            
-            if comments_df is not None:
-                comments_file = f'cleaned_comments_{timestamp}.csv'
-                comments_df.to_csv(comments_file, index=False, encoding='utf-8')
-                print(f"✓ Saved comments to {comments_file}")
+        # Remove duplicates
+        posts_df = posts_df.drop_duplicates(subset=['id'], keep='first')
+        print(f"After removing duplicates: {len(posts_df)}")
         
-        if output_format in ['json', 'both']:
-            posts_file = f'cleaned_posts_{timestamp}.json'
-            posts_df.to_json(posts_file, orient='records', indent=2)
-            print(f"✓ Saved posts to {posts_file}")
-            
-            if comments_df is not None:
-                comments_file = f'cleaned_comments_{timestamp}.json'
-                comments_df.to_json(comments_file, orient='records', indent=2)
-                print(f"✓ Saved comments to {comments_file}")
+        # Clean text fields
+        if 'title' in posts_df.columns:
+            posts_df['title_clean'] = posts_df['title'].apply(self.clean_text)
         
-        # Save summary statistics
-        summary_file = f'cleaning_summary_{timestamp}.txt'
-        with open(summary_file, 'w', encoding='utf-8') as f:
-            f.write("="*60 + "\n")
-            f.write("DATA CLEANING SUMMARY\n")
-            f.write("="*60 + "\n\n")
-            
-            f.write(f"Total Posts: {len(posts_df)}\n")
-            if comments_df is not None:
-                f.write(f"Total Comments: {len(comments_df)}\n")
-            
-            f.write(f"\nDate Range: {posts_df['created_datetime'].min()} to {posts_df['created_datetime'].max()}\n")
-            
-            f.write(f"\nPosts by Subreddit:\n")
-            subreddit_counts = posts_df['subreddit'].value_counts()
-            for subreddit, count in subreddit_counts.items():
-                f.write(f"  r/{subreddit}: {count}\n")
-            
-            f.write(f"\nText Statistics (Posts):\n")
-            f.write(f"  Avg word count: {posts_df['word_count'].mean():.2f}\n")
-            f.write(f"  Avg char count: {posts_df['char_count'].mean():.2f}\n")
-            f.write(f"  Avg medical terms: {posts_df['medical_term_count'].mean():.2f}\n")
-            
-            f.write(f"\nEngagement Statistics:\n")
-            f.write(f"  Avg score: {posts_df['score'].mean():.2f}\n")
-            f.write(f"  Avg comments: {posts_df['num_comments'].mean():.2f}\n")
-            
-        print(f"✓ Saved summary to {summary_file}")
-        print("\n" + "="*60 + "\n")
+        if 'selftext' in posts_df.columns:
+            posts_df['selftext_clean'] = posts_df['selftext'].apply(self.clean_text)
+        
+        # Combine title and selftext for full content
+        if 'title_clean' in posts_df.columns and 'selftext_clean' in posts_df.columns:
+            posts_df['full_text'] = posts_df['title_clean'] + ' ' + posts_df['selftext_clean']
+            posts_df['full_text'] = posts_df['full_text'].str.strip()
+        
+        # Parse timestamps
+        if 'created_utc' in posts_df.columns:
+            posts_df['created_datetime'] = posts_df['created_utc'].apply(self.parse_timestamp)
+            posts_df['year'] = posts_df['created_datetime'].dt.year
+            posts_df['month'] = posts_df['created_datetime'].dt.month
+            posts_df['year_month'] = posts_df['created_datetime'].dt.to_period('M')
+        
+        # Handle missing scores
+        if 'score' in posts_df.columns:
+            posts_df['score'] = posts_df['score'].fillna(0).astype(int)
+        
+        # Handle missing num_comments
+        if 'num_comments' in posts_df.columns:
+            posts_df['num_comments'] = posts_df['num_comments'].fillna(0).astype(int)
+        
+        # Add COVID period flag
+        if 'created_datetime' in posts_df.columns:
+            covid_start = pd.Timestamp('2020-03-01')
+            posts_df['is_post_covid'] = posts_df['created_datetime'] >= covid_start
+            posts_df['covid_period'] = posts_df['is_post_covid'].map({
+                True: 'Post-COVID', 
+                False: 'Pre-COVID'
+            })
+        
+        # Remove posts with no content
+        if 'full_text' in posts_df.columns:
+            posts_df = posts_df[posts_df['full_text'].str.len() > 0]
+            print(f"After removing empty posts: {len(posts_df)}")
+        
+        # Sort by date
+        if 'created_datetime' in posts_df.columns:
+            posts_df = posts_df.sort_values('created_datetime')
+        
+        print(f"Final cleaned posts: {len(posts_df)}")
+        
+        return posts_df
     
-    def run_full_pipeline(self, save_format='csv'):
+    def clean_comments(self, comments_df):
         """
-        Run the complete cleaning and preprocessing pipeline
+        Clean comments dataframe
         
         Args:
-            save_format: Output format ('csv', 'json', or 'both')
+            comments_df (DataFrame): Raw comments data
+            
+        Returns:
+            DataFrame: Cleaned comments data
         """
-        print("\n" + "="*70)
-        print(" "*15 + "DATA CLEANING PIPELINE")
-        print("="*70)
+        if comments_df.empty:
+            print("No comments to clean")
+            return comments_df
         
+        print("\nCleaning comments data...")
+        print(f"Initial comments: {len(comments_df)}")
+        
+        # Remove duplicates
+        comments_df = comments_df.drop_duplicates(subset=['id'], keep='first')
+        print(f"After removing duplicates: {len(comments_df)}")
+        
+        # Clean text fields
+        if 'body' in comments_df.columns:
+            comments_df['body_clean'] = comments_df['body'].apply(self.clean_text)
+        
+        # Parse timestamps
+        if 'created_utc' in comments_df.columns:
+            comments_df['created_datetime'] = comments_df['created_utc'].apply(self.parse_timestamp)
+            comments_df['year'] = comments_df['created_datetime'].dt.year
+            comments_df['month'] = comments_df['created_datetime'].dt.month
+            comments_df['year_month'] = comments_df['created_datetime'].dt.to_period('M')
+        
+        # Handle missing scores
+        if 'score' in comments_df.columns:
+            comments_df['score'] = comments_df['score'].fillna(0).astype(int)
+        
+        # Add COVID period flag
+        if 'created_datetime' in comments_df.columns:
+            covid_start = pd.Timestamp('2020-03-01')
+            comments_df['is_post_covid'] = comments_df['created_datetime'] >= covid_start
+            comments_df['covid_period'] = comments_df['is_post_covid'].map({
+                True: 'Post-COVID', 
+                False: 'Pre-COVID'
+            })
+        
+        # Remove comments with no content
+        if 'body_clean' in comments_df.columns:
+            comments_df = comments_df[comments_df['body_clean'].str.len() > 0]
+            print(f"After removing empty comments: {len(comments_df)}")
+        
+        # Sort by date
+        if 'created_datetime' in comments_df.columns:
+            comments_df = comments_df.sort_values('created_datetime')
+        
+        print(f"Final cleaned comments: {len(comments_df)}")
+        
+        return comments_df
+    
+    def get_data_summary(self, posts_df, comments_df):
+        """
+        Generate summary statistics for the cleaned data
+        
+        Args:
+            posts_df (DataFrame): Cleaned posts
+            comments_df (DataFrame): Cleaned comments
+            
+        Returns:
+            dict: Summary statistics
+        """
+        summary = {
+            'total_posts': len(posts_df),
+            'total_comments': len(comments_df),
+        }
+        
+        if not posts_df.empty:
+            if 'subreddit' in posts_df.columns:
+                summary['unique_subreddits'] = posts_df['subreddit'].nunique()
+                summary['posts_by_subreddit'] = posts_df['subreddit'].value_counts().to_dict()
+            
+            if 'created_datetime' in posts_df.columns:
+                summary['date_range'] = {
+                    'start': str(posts_df['created_datetime'].min()),
+                    'end': str(posts_df['created_datetime'].max())
+                }
+                summary['posts_by_year'] = posts_df['year'].value_counts().sort_index().to_dict()
+            
+            if 'covid_period' in posts_df.columns:
+                summary['posts_by_covid_period'] = posts_df['covid_period'].value_counts().to_dict()
+        
+        return summary
+    
+    def save_cleaned_data(self, posts_df, comments_df, output_dir='cleaned_data'):
+        """
+        Save cleaned data to CSV files
+        
+        Args:
+            posts_df (DataFrame): Cleaned posts
+            comments_df (DataFrame): Cleaned comments
+            output_dir (str): Output directory path
+        """
+        import os
+        
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save posts
+        if not posts_df.empty:
+            posts_file = os.path.join(output_dir, 'cleaned_posts.csv')
+            posts_df.to_csv(posts_file, index=False)
+            print(f"\nSaved cleaned posts to {posts_file}")
+        
+        # Save comments
+        if not comments_df.empty:
+            comments_file = os.path.join(output_dir, 'cleaned_comments.csv')
+            comments_df.to_csv(comments_file, index=False)
+            print(f"Saved cleaned comments to {comments_file}")
+        
+        # Save summary
+        summary = self.get_data_summary(posts_df, comments_df)
+        summary_file = os.path.join(output_dir, 'data_summary.json')
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+        print(f"Saved data summary to {summary_file}")
+    
+    def run_full_cleaning(self, save_output=True):
+        """
+        Run complete data cleaning pipeline
+        
+        Args:
+            save_output (bool): Whether to save cleaned data
+            
+        Returns:
+            tuple: (cleaned_posts_df, cleaned_comments_df)
+        """
         # Load data
         posts_df, comments_df = self.load_data_from_firebase()
         
-        if posts_df is None or len(posts_df) == 0:
-            print("No data to process!")
-            return None, None
+        # Clean data
+        posts_df = self.clean_posts(posts_df)
+        comments_df = self.clean_comments(comments_df)
         
-        # Process posts
-        cleaned_posts = self.process_posts(posts_df)
-        
-        # Process comments if available
-        cleaned_comments = None
-        if comments_df is not None and len(comments_df) > 0:
-            print("\n" + "="*60)
-            print("PROCESSING COMMENTS")
-            print("="*60 + "\n")
-            # Similar processing for comments
-            # (Simplified for now)
-            cleaned_comments = comments_df.copy()
-        
-        # Save cleaned data
-        self.save_cleaned_data(cleaned_posts, cleaned_comments, output_format=save_format)
-        
-        print("✓ Data cleaning pipeline complete!")
-        print("="*70 + "\n")
-        
-        return cleaned_posts, cleaned_comments
-
-
-def main():
-    """Run the cleaning pipeline"""
-    cleaner = DataCleaner()
-    cleaned_posts, cleaned_comments = cleaner.run_full_pipeline(save_format='csv')
-    
-    # Display sample
-    if cleaned_posts is not None:
+        # Print summary
+        summary = self.get_data_summary(posts_df, comments_df)
         print("\n" + "="*60)
-        print("SAMPLE CLEANED DATA")
-        print("="*60 + "\n")
+        print("DATA CLEANING SUMMARY")
+        print("="*60)
+        print(json.dumps(summary, indent=2))
         
-        print("Columns available:")
-        for col in cleaned_posts.columns:
-            print(f"  - {col}")
+        # Save if requested
+        if save_output:
+            self.save_cleaned_data(posts_df, comments_df)
         
-        print(f"\nFirst post sample:")
-        sample = cleaned_posts.iloc[0]
-        print(f"  Subreddit: r/{sample['subreddit']}")
-        print(f"  Title: {sample['title'][:100]}...")
-        print(f"  Word count: {sample['word_count']}")
-        print(f"  Medical terms: {sample['medical_terms']}")
-        print(f"  Relevance score: {sample['relevance_score']}")
+        return posts_df, comments_df
 
 
 if __name__ == "__main__":
-    main()
+    cleaner = DataCleaner()
+    posts_df, comments_df = cleaner.run_full_cleaning(save_output=True)
+    print("\nData cleaning completed successfully!")

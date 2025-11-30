@@ -22,6 +22,37 @@ import re
 load_dotenv()
 
 class RedditDataCollectorPRAW:
+    def collect_comments_for_post(self, post_id, subreddit_name, num_comments):
+        """Collect comments for a specific post using PRAW"""
+        comments_list = []
+        try:
+            submission = self.reddit.submission(id=post_id)
+            submission.comments.replace_more(limit=0)
+            all_comments = submission.comments.list()
+            for comment in all_comments[:num_comments]:
+                if hasattr(comment, 'body') and comment.body and len(comment.body) > DATA_COLLECTION_CONFIG['min_comment_length']:
+                    matched_keywords = self.match_keywords(comment.body)
+                    relevance_score = self.calculate_relevance_score(
+                        comment.body, subreddit_name,
+                        matched_keywords.get('claude', {})
+                    )
+                    comment_data = {
+                        'id': comment.id,
+                        'post_id': post_id,
+                        'subreddit': subreddit_name,
+                        'body': comment.body,
+                        'author': str(comment.author) if comment.author else '[deleted]',
+                        'created_utc': int(comment.created_utc),
+                        'created_date': datetime.fromtimestamp(comment.created_utc).isoformat(),
+                        'score': comment.score,
+                        'parent_id': comment.parent_id,
+                        'matched_keywords': matched_keywords,
+                        'relevance_score': relevance_score,
+                    }
+                    comments_list.append(comment_data)
+        except Exception as e:
+            print(f"Error collecting comments for post {post_id}: {str(e)}")
+        return comments_list
     def __init__(self):
         """Initialize the data collector with PRAW"""
         # Initialize PRAW using credentials from .env file
@@ -216,7 +247,7 @@ class RedditDataCollectorPRAW:
         
         return collected_posts
     
-    def run_collection(self, subreddits=None, collect_comments=False):
+    def run_collection(self, subreddits=None, collect_comments=True):
         """Run the full data collection pipeline"""
         print("\n" + "="*60)
         print("REDDIT DATA COLLECTION PIPELINE (PRAW)")
@@ -231,9 +262,10 @@ class RedditDataCollectorPRAW:
         print(f"\nConfiguration:")
         print(f"  Subreddits: {len(subreddits)}")
         print(f"  Expected total posts: ~{total_expected}")
-        print(f"  Collect comments: {collect_comments} (not implemented yet)")
+        print(f"  Collect comments: {collect_comments}")
         
         all_posts = []
+        all_comments = []
         
         # Collect from each subreddit (sorted by weight, highest first)
         sorted_subreddits = sorted(subreddits, 
@@ -242,12 +274,37 @@ class RedditDataCollectorPRAW:
         
         for subreddit in sorted_subreddits:
             posts = self.collect_posts_from_subreddit(subreddit, max_posts=None)
-            
+
             if posts:
                 print(f"Storing {len(posts)} posts to Firebase...")
                 self.firebase.store_batch_posts(posts)
                 all_posts.extend(posts)
-            
+
+                if collect_comments:
+                    print(f"Collecting comments for posts...")
+                    for post in tqdm(posts, desc="Collecting comments"):
+                        matched_keywords = post.get('matched_keywords', {})
+                        total_matches = sum(
+                            len(kws)
+                            for llm_kws in matched_keywords.values()
+                            for kws in llm_kws.values()
+                        )
+                        base_limit = 30
+                        per_keyword = 5
+                        max_limit = DATA_COLLECTION_CONFIG['max_comments_per_post']
+                        dynamic_limit = min(base_limit + per_keyword * total_matches, max_limit)
+                        comments = self.collect_comments_for_post(
+                            post['id'],
+                            post['subreddit'],
+                            num_comments=dynamic_limit
+                        )
+                        if comments:
+                            all_comments.extend(comments)
+
+                    if all_comments:
+                        print(f"Storing {len(all_comments)} comments to Firebase...")
+                        self.firebase.store_batch_comments(all_comments)
+
             # Rate limiting
             time.sleep(2)
         
@@ -256,12 +313,13 @@ class RedditDataCollectorPRAW:
         stats = self.firebase.get_collection_stats()
         print(f"\nCollection Summary:")
         print(f"  Total posts collected this run: {len(all_posts)}")
-        print(f"  Total in database: {stats['total_posts']} posts")
-        
+        print(f"  Total comments collected this run: {len(all_comments)}")
+        print(f"  Total in database: {stats['total_posts']} posts, {stats['total_comments']} comments")
+
         print("\n✓ Data collection complete!")
-        return all_posts
+        return all_posts, all_comments
 
 
 if __name__ == "__main__":
     collector = RedditDataCollectorPRAW()
-    posts = collector.run_collection(subreddits=None, collect_comments=False)
+    posts, comments = collector.run_collection(subreddits=None, collect_comments=True)
