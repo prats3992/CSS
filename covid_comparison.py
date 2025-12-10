@@ -59,28 +59,18 @@ class CovidComparison:
         sentiment_dist = posts_df.groupby(['covid_period', 'sentiment_category']).size().unstack(fill_value=0)
         sentiment_pct = sentiment_dist.div(sentiment_dist.sum(axis=1), axis=0) * 100
         
-        # Create visualization
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        # Create visualization - absolute counts only
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         
         # Absolute counts
-        sentiment_dist.plot(kind='bar', ax=axes[0], color=['#EF476F', '#FFD166', '#06D6A0'], 
+        sentiment_dist.plot(kind='bar', ax=ax, color=['#EF476F', '#FFD166', '#06D6A0'], 
                            width=0.7, alpha=0.8)
-        axes[0].set_xlabel('COVID Period', fontsize=12)
-        axes[0].set_ylabel('Number of Posts', fontsize=12)
-        axes[0].set_title('Sentiment Distribution: Absolute Counts', fontsize=14, fontweight='bold')
-        axes[0].legend(title='Sentiment')
-        axes[0].grid(True, alpha=0.3, axis='y')
-        axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=0)
-        
-        # Percentages
-        sentiment_pct.plot(kind='bar', ax=axes[1], color=['#EF476F', '#FFD166', '#06D6A0'], 
-                          width=0.7, alpha=0.8)
-        axes[1].set_xlabel('COVID Period', fontsize=12)
-        axes[1].set_ylabel('Percentage (%)', fontsize=12)
-        axes[1].set_title('Sentiment Distribution: Percentages', fontsize=14, fontweight='bold')
-        axes[1].legend(title='Sentiment')
-        axes[1].grid(True, alpha=0.3, axis='y')
-        axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=0)
+        ax.set_xlabel('COVID Period', fontsize=12)
+        ax.set_ylabel('Number of Posts', fontsize=12)
+        ax.set_title('Sentiment Distribution: Pre vs Post COVID', fontsize=14, fontweight='bold')
+        ax.legend(title='Sentiment')
+        ax.grid(True, alpha=0.3, axis='y')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
         
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'sentiment_distribution_comparison.png'), 

@@ -219,25 +219,16 @@ class TemporalAnalyzer:
         })
         
         # Plot
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         
-        # Absolute change
+        # Absolute change only
         colors = ['#06D6A0' if x >= 0 else '#EF476F' for x in yoy_df['yoy_change'][1:]]
-        axes[0].bar(yoy_df['year'][1:], yoy_df['yoy_change'][1:], color=colors, alpha=0.7)
-        axes[0].axhline(y=0, color='black', linestyle='-', linewidth=0.8)
-        axes[0].set_xlabel('Year', fontsize=12)
-        axes[0].set_ylabel('YoY Sentiment Change', fontsize=12)
-        axes[0].set_title('Year-over-Year Sentiment Change (Absolute)', fontsize=14, fontweight='bold')
-        axes[0].grid(True, alpha=0.3, axis='y')
-        
-        # Percentage change
-        colors = ['#06D6A0' if x >= 0 else '#EF476F' for x in yoy_df['yoy_pct_change'][1:]]
-        axes[1].bar(yoy_df['year'][1:], yoy_df['yoy_pct_change'][1:], color=colors, alpha=0.7)
-        axes[1].axhline(y=0, color='black', linestyle='-', linewidth=0.8)
-        axes[1].set_xlabel('Year', fontsize=12)
-        axes[1].set_ylabel('YoY Sentiment Change (%)', fontsize=12)
-        axes[1].set_title('Year-over-Year Sentiment Change (Percentage)', fontsize=14, fontweight='bold')
-        axes[1].grid(True, alpha=0.3, axis='y')
+        ax.bar(yoy_df['year'][1:], yoy_df['yoy_change'][1:], color=colors, alpha=0.7)
+        ax.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
+        ax.set_xlabel('Year', fontsize=12)
+        ax.set_ylabel('YoY Sentiment Change', fontsize=12)
+        ax.set_title('Year-over-Year Sentiment Change', fontsize=14, fontweight='bold')
+        ax.grid(True, alpha=0.3, axis='y')
         
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'yoy_sentiment_change.png'), 

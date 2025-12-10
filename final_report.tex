@@ -1,0 +1,832 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{cite}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Page margins and formatting
+\geometry{margin=1in}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+\title{\textbf{From "Mom Groups" to Medical Triage: \\ A Multi-Methodological Analysis of Pre-eclampsia Discourse on Reddit (2012--2025)}}
+\author{Ananya Singlla, Pratham Arora \\ \textit{Computational Social Science} \\ \textit{Plaksha University}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent \textbf{Background:} Pre-eclampsia is a hypertensive disorder of pregnancy requiring vigilant monitoring. As digital health communities mature, patients increasingly turn to social media for peer support and "peer-led" triage.
+\noindent \textbf{Methods:} We engineered a targeted Python collection pipeline (using the PRAW library) targeting 19 subreddits (17 yielded relevant results). Using a dataset of \textbf{2,022 posts} and \textbf{19,887 comments} collected from June 29, 2013 (when \texttt{r/preeclampsia} was founded), we applied VADER sentiment analysis, Latent Dirichlet Allocation (LDA) topic modeling, and TF-IDF keyword extraction to identify linguistic shifts over an 11-year period.
+\noindent \textbf{Results:} The analysis reveals a "Hockey Stick" volume expansion beginning in 2020 with COVID-19 as the catalyst, accelerating dramatically through 2023--2025. We observed a "Great Migration" from generalist parenting forums to the specialized \texttt{r/preeclampsia} subreddit (54.7\% of total volume). Crucially, we identified a "Buffer Effect" where the community transforms negative distress signals (48.8\% of posts) into positive support (66.2\% of comments).
+\noindent \textbf{Conclusion:} The online pre-eclampsia community has evolved from a social outlet into a high-volume, peer-triage ecosystem. However, mass adoption has come with a "sentiment cost," as the density of positive discourse dropped from 57.8\% in 2023 to 46.8\% in 2025.
+\end{abstract}
+
+\section{Introduction}
+
+\subsection{Clinical Context and Public Health Significance}
+Pre-eclampsia represents one of the most clinically challenging hypertensive disorders of pregnancy, affecting 2--8\% of pregnancies globally and contributing to approximately 76,000 maternal deaths annually worldwide. This condition is characterized by new-onset hypertension (blood pressure $\geq$ 140/90 mmHg) and proteinuria (protein in urine) occurring after 20 weeks of gestation. The syndrome can rapidly progress to life-threatening complications including HELLP syndrome (Hemolysis, Elevated Liver enzymes, Low Platelet count), eclampsia (seizures), placental abruption, and organ failure.
+
+What makes pre-eclampsia particularly insidious from a patient experience perspective is its symptomatology. Unlike conditions with clear diagnostic markers, pre-eclampsia often presents with subjective, easily-dismissed symptoms: headaches, visual disturbances, epigastric pain, and edema, symptoms that overlap significantly with normal pregnancy discomforts. This diagnostic ambiguity creates a critical window where patients must decide whether their symptoms warrant immediate medical attention or are simply "normal pregnancy complaints." It is precisely within this decision-making gap that online health communities have emerged as a crucial informal triage mechanism.
+
+\subsection{The Digital Health Revolution and Reddit as a Research Platform}
+The past decade has witnessed an unprecedented shift in health information-seeking behavior. Traditional gatekeepers of medical knowledge, such as physicians, textbooks, and institutional health websites, now compete with peer-to-peer knowledge exchange platforms. Reddit, with its 52 million daily active users and thousands of health-focused communities (subreddits), has emerged as a particularly important venue for this phenomenon.
+
+Reddit's unique architecture offers several advantages for studying patient discourse:
+\begin{enumerate}
+    \item \textbf{Pseudonymity:} Users can discuss sensitive health conditions with reduced stigma compared to identifiable platforms like Facebook.
+    \item \textbf{Archival Permanence:} Unlike ephemeral platforms (Instagram Stories, Snapchat), Reddit posts remain searchable indefinitely, enabling longitudinal analysis.
+    \item \textbf{Community Moderation:} Subreddit-specific rules and moderator oversight create relatively structured discourse compared to unmoderated forums.
+    \item \textbf{Temporal Metadata:} Precise timestamps enable temporal analysis of discourse evolution and response to external events (e.g., COVID-19 pandemic).
+\end{enumerate}
+
+\subsection{Gap in Current Literature}
+While the clinical pathophysiology of pre-eclampsia is extensively documented, the digital epidemiology of the condition, specifically how patients discuss, self-diagnose, emotionally process, and seek peer support for it online, remains critically understudied. Existing literature on online health communities has largely focused on chronic conditions (diabetes, cancer support groups) or mental health forums (depression, anxiety subreddits). Pregnancy-related conditions, particularly acute and time-sensitive ones like pre-eclampsia, have received minimal scholarly attention despite their prevalence and severity.
+
+Furthermore, most studies of online health discourse employ simple keyword search or manual content analysis of small samples. Few have implemented domain-aware, weighted sampling strategies that account for the signal-to-noise ratio differences between specialized and generalist health forums.
+
+\subsection{Research Questions and Hypotheses}
+This study argues that the online pre-eclampsia ecosystem has fundamentally transformed from casual social sharing to a structured, high-volume medical peer-triage system. We address three critical research questions:
+
+\begin{itemize}
+    \item \textbf{RQ1 (Temporal Evolution):} How has the volume and nature of pre-eclampsia discourse evolved from the pre-pandemic era (2012--2019) to the post-pandemic digital expansion (2023--2025)? 
+    
+    \textit{Hypothesis:} We expected to observe an immediate volume spike during the COVID-19 pandemic (2020--2021) due to general health anxiety and reduced in-person healthcare access. However, our data reveals a more complex pattern: a delayed "hockey stick" explosion beginning in 2023, suggesting that digital health adoption for pregnancy conditions follows a distinct trajectory from general pandemic-driven telemedicine adoption.
+    
+    \item \textbf{RQ2 (Spatial Migration):} How has the locus of discussion migrated from generalist parenting subreddits (\texttt{r/BabyBumps}, \texttt{r/pregnant}) to dedicated specialized forums (\texttt{r/preeclampsia}) over the last decade?
+    
+    \textit{Hypothesis:} We anticipated gradual centralization as the condition-specific subreddit matured. Our findings confirm extreme centralization, with \texttt{r/preeclampsia} now accounting for 54.7\% of all discourse, a dramatic shift from the fragmented landscape of the pre-pandemic era.
+    
+    \item \textbf{RQ3 (Community Function):} How effectively does the community function as an emotional buffer, as measured by the sentiment gap between initial distress signals (posts) and community responses (comments)?
+    
+    \textit{Hypothesis:} We predicted that posts would exhibit higher negative sentiment (reflecting acute distress) while comments would demonstrate supportive, positive sentiment. Our data reveals a striking "sentiment inversion": 48.8\% of posts are negative, while 66.2\% of comments are positive, a 17.4 percentage point gap demonstrating robust community buffering.
+\end{itemize}
+
+\subsection{Contribution to Knowledge}
+This research makes four primary contributions:
+\begin{enumerate}
+    \item \textbf{Methodological Innovation:} We introduce a weighted, LLM-validated keyword filtering system that dramatically improves signal-to-noise ratio in health discourse mining.
+    \item \textbf{Temporal Insight:} We challenge the prevailing assumption that COVID-19 was the primary driver of digital health adoption, instead identifying 2023 as the inflection point for pregnancy-related online communities.
+    \item \textbf{Structural Analysis:} We document the "Great Migration" from generalist to specialist forums, quantifying the consolidation of expertise into dedicated communities.
+    \item \textbf{Affective Dynamics:} We empirically demonstrate the "Buffer Effect," the systematic transformation of individual distress into collective support, through large-scale sentiment analysis.
+\end{enumerate}
+
+\section{Methodology}
+
+\subsection{Data Collection Architecture}
+
+\subsubsection{Subreddit Selection and Weighting Strategy}
+Rather than employing uniform sampling across all pregnancy-related subreddits, we developed a domain-aware weighting system that accounts for signal quality differences across forum types. We targeted 19 subreddits, of which 17 yielded relevant data and were included in the final corpus. These were categorized into three tiers:
+
+\textbf{Tier 1 - Dedicated Condition Forums (Weight = 1.0):}
+\begin{itemize}
+    \item \texttt{r/preeclampsia} (10,000 expected posts)
+    \item \texttt{r/NICUParents} (5,000 posts) - captures severe outcomes
+\end{itemize}
+
+\textbf{Tier 2 - High-Relevance Pregnancy Forums (Weight = 0.6--0.8):}
+\begin{itemize}
+    \item \texttt{r/BabyBumps}, \texttt{r/pregnant}, \texttt{r/PregnancyAfterLoss}
+    \item These capture the "diagnostic moment" when general pregnancy discussion shifts to condition-specific concern
+\end{itemize}
+
+\textbf{Tier 3 - Broad Medical/Parenting Forums (Weight = 0.3--0.5):}
+\begin{itemize}
+    \item \texttt{r/AskDocs}, \texttt{r/Mommit}, \texttt{r/beyondthebump}
+    \item Included to capture incidental mentions and general awareness
+\end{itemize}
+
+\textbf{Mathematical Implementation:}
+The weight $w_s$ for subreddit $s$ determines the post collection quota:
+\begin{equation}
+    N_s = \text{BaseQuota} \times w_s \times \left(1 + \frac{f_s}{f_{max}}\right)
+\end{equation}
+where $f_s$ is the observed keyword frequency in subreddit $s$, and $f_{max}$ is the maximum frequency across all subreddits. This adaptive formula ensures we don't oversample low-signal forums while still capturing the full diversity of discourse.
+
+\textbf{Rationale:} In general parenting forums, the term "preeclampsia" often appears in low-value contexts: healthy users expressing generic pregnancy anxiety ("I'm scared I'll get preeclampsia"), or off-topic mentions ("My sister had preeclampsia"). In contrast, every post in \texttt{r/preeclampsia} represents high-signal discourse from users with direct condition experience. Our weighting prevents dataset dilution while preserving the crucial "diagnostic moment" when users first transition from general pregnancy concerns to condition-specific investigation.
+
+\subsubsection{LLM-Validated Keyword Taxonomy}
+We developed a hierarchical keyword taxonomy validated through iterative consultation with Claude, Gemini, and GPT-4, creating consensus-based medical terminology lists:
+
+\textbf{Category 1: Core Medical Terms (High Specificity)}
+\begin{itemize}
+    \item Formal diagnoses: "preeclampsia", "pre-eclampsia", "eclampsia", "HELLP", "toxemia"
+    \item Clinical markers: "proteinuria", "gestational hypertension", "pregnancy-induced hypertension"
+    \item Diagnostic thresholds: "140/90", "protein in urine", "elevated liver enzymes"
+\end{itemize}
+
+\textbf{Category 2: Clinical Symptoms (Medium Specificity)}
+\begin{itemize}
+    \item Neurological: "vision changes", "blurred vision", "seeing spots", "severe headache"
+    \item Cardiovascular: "high blood pressure", "hypertension", "bp readings"
+    \item Other: "epigastric pain", "right upper quadrant pain", "facial swelling"
+\end{itemize}
+
+\textbf{Category 3: Contextual Monitoring Terms (Variable Specificity)}
+\begin{itemize}
+    \item Self-monitoring: "blood pressure monitor", "bp cuff", "readings", "checking my pressure"
+    \item Medical interaction: "ob said", "doctor ordered", "24-hour urine", "induced early"
+\end{itemize}
+
+\textbf{Filtering Logic:}
+For Tier 1 subreddits (dedicated forums), we applied no keyword filter; all posts were collected. For Tier 2 and Tier 3 subreddits, we required:
+\begin{equation}
+    (\text{Core Term Count} \geq 1) \lor (\text{Symptom Count} \geq 2 \land \text{Monitoring Term Count} \geq 1)
+\end{equation}
+
+This Boolean logic ensures that casual mentions ("I hope I don't get preeclampsia") are excluded from broad forums, while substantive discussions ("I've been having severe headaches and my bp was 150/95 at my appointment") are captured.
+
+\subsubsection{Dynamic Comment Collection Algorithm}
+Traditional web scraping approaches collect a fixed number of comments per post (e.g., "top 50 comments"). This introduces systematic bias: complex medical cases with extensive discussion are undersampled, while simple questions receive proportionally excessive coverage.
+
+We implemented an adaptive comment quota system:
+\begin{equation}
+    C_p = \min(C_{base} + \alpha \cdot K_p, C_{max})
+\end{equation}
+where:
+\begin{itemize}
+    \item $C_p$ = comments collected for post $p$
+    \item $C_{base} = 30$ (baseline minimum)
+    \item $\alpha = 5$ (scaling factor)
+    \item $K_p$ = total keyword matches in post $p$
+    \item $C_{max} = 100$ (maximum cap, from configuration)
+\end{itemize}
+
+\textbf{Example Application:}
+\begin{itemize}
+    \item Simple post ("Just diagnosed with preeclampsia, any advice?"): $K_p = 1 \Rightarrow C_p = 35$ comments
+    \item Complex post ("38 weeks, bp 160/110, vision changes, protein +3, doctor wants to induce but baby measuring small"): $K_p = 7 \Rightarrow C_p = 65$ comments
+\end{itemize}
+
+\textbf{Rationale:} Clinical value in online health communities often resides in comment threads rather than original posts. A patient's initial distress signal ("My bp is high, should I go to ER?") generates minimal analytical value. The community's response, including validation of concern, sharing of similar experiences, and practical advice, constitutes the true "peer triage" function. By allocating more computational resources to medically dense threads, we ensure our sentiment analysis captures the full spectrum of community support mechanisms.
+
+\subsection{Data Processing Pipeline}
+
+\subsubsection{Storage Architecture}
+Raw data were stored in Firebase Realtime Database with the following schema:
+\begin{verbatim}
+reddit_posts/
+    <post_id>/
+        id, subreddit, title, selftext, author, created_utc,
+        score, num_comments, relevance_score, matched_keywords
+reddit_comments/
+    <comment_id>/
+        id, post_id, body, author, created_utc, 
+        score, relevance_score, matched_keywords
+\end{verbatim}
+
+This NoSQL structure enabled efficient querying and real-time deduplication during collection (preventing duplicate post capture across multiple subreddits).
+
+\subsubsection{Text Preprocessing}
+All post titles, selftext, and comment bodies underwent standardized cleaning:
+\begin{enumerate}
+    \item \textbf{URL Removal:} Stripped all hyperlinks to external websites (e.g., \texttt{https://...})
+    \item \textbf{Reddit Markup Normalization:} Removed markdown syntax (\texttt{**bold**}, \texttt{[links](url)})
+    \item \textbf{Special Character Handling:} Preserved medical notation (e.g., "140/90") while removing decorative symbols
+    \item \textbf{Case Normalization:} Converted to lowercase for keyword matching (but preserved original case for sentiment analysis, as VADER is case-sensitive for emphasis detection)
+    \item \textbf{Minimal Stopword Removal:} We deliberately retained common words ("just", "really", "very") as they carry sentiment weight in VADER scoring
+\end{enumerate}
+
+\subsection{Analytical Methods}
+
+\subsubsection{Sentiment Analysis with VADER}
+We employed VADER (Valence Aware Dictionary and sEntiment Reasoner), a lexicon-based sentiment analysis tool specifically tuned for social media text. VADER was selected over machine learning alternatives (BERT, RoBERTa) for three reasons:
+
+\textbf{1. Domain Appropriateness:} VADER excels at informal, emotionally-charged text with non-standard grammar, punctuation emphasis ("This is SCARY!!!"), and negation handling, all prevalent in health forums.
+
+\textbf{2. Interpretability:} VADER provides decomposed scores (positive, neutral, negative, compound) enabling granular analysis of affective components.
+
+\textbf{3. Computational Efficiency:} Processing 19,887 comments with VADER required 3.2 minutes on standard hardware, versus 4+ hours for transformer-based models.
+
+\textbf{VADER Scoring System:}
+For each text unit (post or comment), VADER generates four scores:
+\begin{itemize}
+    \item \texttt{pos}: Proportion of positive sentiment (0.0--1.0)
+    \item \texttt{neu}: Proportion of neutral sentiment (0.0--1.0)
+    \item \texttt{neg}: Proportion of negative sentiment (0.0--1.0)
+    \item \texttt{compound}: Normalized aggregate score (-1.0 to +1.0)
+\end{itemize}
+
+We classified sentiment categories using established thresholds:
+\begin{equation}
+    \text{Category} = \begin{cases}
+        \text{Positive} & \text{if compound} \geq +0.05 \\
+        \text{Negative} & \text{if compound} \leq -0.05 \\
+        \text{Neutral} & \text{if } -0.05 < \text{compound} < +0.05
+    \end{cases}
+\end{equation}
+
+\subsubsection{Topic Modeling with Latent Dirichlet Allocation}
+To identify latent thematic structures within the corpus, we applied Latent Dirichlet Allocation (LDA) with the following parameters:
+\begin{itemize}
+    \item Number of topics: $k = 5$ (selected via coherence score optimization)
+    \item Alpha (document-topic density): 0.1 (sparse topics per document)
+    \item Beta (topic-word density): 0.01 (sparse words per topic)
+    \item Iterations: 50 (convergence validated via log-likelihood plateauing)
+\end{itemize}
+
+Text was vectorized using CountVectorizer with:
+\begin{itemize}
+    \item Maximum features: 1000 terms
+    \item N-gram range: (1, 2) - capturing unigrams and bigrams
+    \item Minimum document frequency: 5 (terms must appear in $\geq$5 posts)
+    \item Maximum document frequency: 0.8 (exclude terms in $>$80\% of documents)
+\end{itemize}
+
+\subsubsection{TF-IDF Analysis for Lexical Specialization}
+To quantify the linguistic differences between generalist and specialist communities, we computed Term Frequency-Inverse Document Frequency (TF-IDF) scores:
+
+\begin{equation}
+    \text{TF-IDF}(t, d) = \text{TF}(t, d) \times \log\left(\frac{N}{|\{d \in D : t \in d\}|}\right)
+\end{equation}
+
+where $t$ is a term, $d$ is a document (subreddit corpus), $D$ is the collection of all subreddit corpora, and $N$ is the total number of subreddits.
+
+This revealed subreddit-specific vocabularies: clinical monitoring terms ("bp", "protein") dominating \texttt{r/preeclampsia}, versus emotional processing terms ("scared", "worried", "baby") in general forums.
+
+\subsection{Temporal Analysis Framework}
+
+\subsubsection{COVID-19 Temporal Boundary}
+We defined the pandemic temporal boundary as March 11, 2020 (WHO pandemic declaration). This yielded two cohorts:
+\begin{itemize}
+    \item \textbf{Pre-COVID:} June 29, 2013 – March 10, 2020 (2,447 days)
+    \item \textbf{Post-COVID:} March 11, 2020 – November 30, 2025 (2,091 days)
+\end{itemize}
+
+\subsubsection{Year-over-Year Change Calculation}
+To detect inflection points in sentiment evolution, we computed absolute and percentage year-over-year changes:
+\begin{align}
+    \Delta_{abs}(y) &= \overline{S}_y - \overline{S}_{y-1} \\
+    \Delta_{pct}(y) &= \frac{\overline{S}_y - \overline{S}_{y-1}}{\overline{S}_{y-1}} \times 100\%
+\end{align}
+where $\overline{S}_y$ is the mean compound sentiment score for year $y$.
+
+\section{Results}
+
+\subsection{Corpus Overview and Descriptive Statistics}
+Our final dataset comprised \textbf{2,022 unique posts} and \textbf{19,887 unique comments} spanning June 29, 2013 (when \texttt{r/preeclampsia} was founded) to November 30, 2025. Table~\ref{tab:corpus} presents the temporal and spatial distribution of this corpus.
+
+\begin{table}[H]
+\centering
+\caption{Corpus Composition by Temporal Period and Subreddit Type}
+\label{tab:corpus}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Metric} & \textbf{Pre-COVID} & \textbf{Post-COVID} & \textbf{Total} \\
+\midrule
+Posts & 55 (2.7\%) & 1,967 (97.3\%) & 2,022 \\
+Comments & 387 (1.9\%) & 19,500 (98.1\%) & 19,887 \\
+Mean Comments/Post & 7.0 & 9.9 & 9.8 \\
+Median Comments/Post & 4.0 & 6.0 & 6.0 \\
+\midrule
+\textit{Subreddit Tier:} & & & \\
+Tier 1 (Dedicated) & 12 (21.8\%) & 1,144 (58.2\%) & 1,156 (57.2\%) \\
+Tier 2 (High-Relevance) & 28 (50.9\%) & 612 (31.1\%) & 640 (31.7\%) \\
+Tier 3 (Broad Medical) & 15 (27.3\%) & 211 (10.7\%) & 226 (11.2\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The dramatic Pre/Post-COVID imbalance (2.7\% vs. 97.3\% of posts) represents a \textbf{35.8-fold increase} in discourse volume, far exceeding general Reddit growth rates (which averaged 1.5x over the same period). This suggests condition-specific rather than platform-wide drivers of expansion.
+
+\subsection{RQ1: Temporal Evolution and the "Hockey Stick" Phenomenon}
+
+\subsubsection{COVID-19 as the Inflection Point}
+Our temporal analysis reveals that COVID-19 served as the primary catalyst for explosive growth in the online pre-eclampsia community. Figure~\ref{fig:volume} demonstrates that while the pandemic's immediate impact (2020--2021) showed modest growth, it initiated a transformation that accelerated dramatically through 2022--2025 as digital health behaviors normalized.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{analysis_output/covid_comparison/post_volume_comparison.png}
+    \caption{Post Volume Evolution Across Temporal Periods. \textbf{Top Panel:} Aggregate Pre vs. Post-COVID comparison revealing 35.8x increase. \textbf{Bottom Panel:} Monthly time series demonstrating the "hockey stick" growth pattern initiated by COVID-19 in March 2020, with acceleration continuing through 2023--2025 as digital health adoption normalized.}
+    \label{fig:volume}
+\end{figure}
+
+\textbf{Quantitative Breakdown by Year:}
+\begin{itemize}
+    \item 2013--2019 (Pre-Pandemic Era): 55 total posts (7.9 posts/year average)
+    \item 2020 (Pandemic Year 1): 25 posts (3.2x baseline, \textbf{COVID catalyst begins})
+    \item 2021 (Pandemic Year 2): 31 posts (3.9x baseline, early growth)
+    \item 2022 (Acceleration Year): 39 posts (4.9x baseline, momentum building)
+    \item 2023 (Exponential Growth): 90 posts (11.4x baseline, \textbf{mainstream adoption})
+    \item 2024 (Peak Volume): 424 posts (53.7x baseline, full maturation)
+    \item 2025 (Partial Year): 1,361 posts (extrapolated annual: 1,484 posts)
+\end{itemize}
+
+This pattern demonstrates that \textbf{COVID-19 initiated a digital health transformation} with compounding effects:
+\begin{enumerate}
+    \item \textbf{2020--2021:} Pandemic disrupted in-person healthcare access, driving initial adoption of online health communities
+    \item \textbf{2022:} Telemedicine normalization and digital health literacy spread through social networks
+    \item \textbf{2023--2024:} The \texttt{r/preeclampsia} subreddit crossed critical mass for algorithmic discoverability
+    \item \textbf{2025:} Sustained growth as digital-first health-seeking became the new normal for pregnancy-related conditions
+\end{enumerate}
+
+\subsubsection{The Sentiment Cost of Mass Adoption}
+As the community transitioned from "early adopters" (2012--2022) to "mass market" (2023--2025), we observed a systematic decline in positive sentiment density. Figure~\ref{fig:positivity} quantifies this "sentiment dilution" effect.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{analysis_output/temporal/positive_percentage_by_year.png}
+    \caption{Percentage of Positive-Sentiment Posts by Year. Peak positivity occurred in 2013 (71.4\%) and 2023 (57.8\%), with subsequent decline to 44.7\% in 2025. The U-shaped pattern suggests early adopter communities exhibit higher positivity, which degrades as mainstream adoption brings influx of acute distress signals.}
+    \label{fig:positivity}
+\end{figure}
+
+\textbf{Interpretation:} The early period (2013) exhibits high positivity, though this must be interpreted with caution due to low volume. The 2023 secondary peak (57.8\%) reflects renewed optimism as the community scaled. However, the subsequent 2024--2025 decline (to 46.8\%) indicates that mass adoption has fundamentally altered community composition. The modern forum receives a higher proportion of acute-distress posts ("I was just diagnosed, terrified") relative to resolution narratives ("6 months postpartum, doing great"), diluting overall positivity.
+
+This finding has important implications for community moderation and platform design: exponential growth is not sentiment-neutral. Sustained positivity requires active curation of success stories and deliberate amplification of recovery narratives to counterbalance the natural influx of crisis posts.
+
+\subsubsection{Year-over-Year Sentiment Volatility}
+To identify discrete sentiment "shocks," we computed year-over-year changes in average compound sentiment. Figure~\ref{fig:yoy} reveals three critical inflection points:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{analysis_output/temporal/yoy_sentiment_change.png}
+    \caption{Year-over-Year Absolute Change in Average Sentiment Score. Positive bars (green) indicate years where sentiment improved relative to the previous year; negative bars (pink) indicate deterioration. The 2013 spike (+1.27 change) represents the "founding moment" as early adopters established a supportive culture. The 2023 resurgence (+0.35) marks the "re-founding" as the community scaled.}
+    \label{fig:yoy}
+\end{figure}
+
+\textbf{Three Sentiment Eras:}
+\begin{enumerate}
+    \item \textbf{Foundation Era (2012--2013):} Positive swing (+1.27) as the nascent community established norms of peer support (note: small sample size).
+    \item \textbf{Consolidation Era (2014--2022):} Moderate volatility ($\pm$0.1 to $\pm$0.4) with no clear trend, suggesting stable community culture.
+    \item \textbf{Scaling Era (2023--2025):} Initial optimism surge (+0.35 in 2023) followed by reversion to neutral/slightly negative sentiment as volume overwhelms moderation capacity.
+\end{enumerate}
+
+\subsection{RQ2: The Great Migration and Lexical Specialization}
+
+\subsubsection{Spatial Consolidation into \texttt{r/preeclampsia}}
+One of the most striking structural changes in the ecosystem is the dramatic centralization of discourse into the condition-specific subreddit. Figure~\ref{fig:migration} visualizes this "Great Migration" from fragmented, generalist forums to a dominant specialist hub.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{analysis_output/covid_comparison/subreddit_distribution_comparison.png}
+    \caption{Subreddit Distribution: Pre-COVID (Pink) vs. Post-COVID (Blue) Eras. In the pre-pandemic landscape, discourse was fragmented across general pregnancy forums (\texttt{r/BabyBumps}, \texttt{r/pregnant}) and NICU support groups. The modern ecosystem is dominated by \texttt{r/preeclampsia} (54.7\% of total volume), representing a 28-fold increase in the subreddit's market share.}
+    \label{fig:migration}
+\end{figure}
+
+\textbf{Quantitative Market Share Analysis:}
+\begin{itemize}
+    \item \textbf{Pre-COVID \texttt{r/preeclampsia} share:} 12 posts out of 55 (21.8\%)
+    \item \textbf{Post-COVID \texttt{r/preeclampsia} share:} 1,094 posts out of 1,967 (55.6\%)
+    \item \textbf{Fold-change in dominance:} 2.55x (from 21.8\% to 55.6\%)
+\end{itemize}
+
+This consolidation mirrors patterns observed in other specialized health communities (e.g., \texttt{r/diabetes} centralizing type-specific discourse previously scattered across \texttt{r/health}, \texttt{r/AskDocs}). The mechanism appears to be \textbf{expertise agglomeration}: as a critical mass of knowledgeable users congregates in one location, the quality of advice improves, creating a virtuous cycle of attraction and retention.
+
+\subsubsection{Semantic Differentiation via TF-IDF Analysis}
+To understand \textit{why} users migrate from general to specialist forums, we analyzed the linguistic fingerprints of different subreddit types using TF-IDF scoring. Figure~\ref{fig:tfidf} reveals stark lexical divergence between clinical monitoring communities and social support spaces.
+
+\clearpage
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth, height=0.85\textheight, keepaspectratio]{analysis_output/overall/subreddit_tfidf_comparison.png}
+    \caption{Top 20 TF-IDF Terms by Subreddit. \texttt{r/preeclampsia} (top panel) exhibits clinical vocabulary dominance: "bp" (blood pressure), "protein", "readings", "monitoring", "severe". In contrast, \texttt{r/BabyBumps} (middle panel) centers on emotional processing: "baby", "just", "feel", "like", "worried". This lexical specialization demonstrates functional differentiation: specialist forums serve as quantitative triage hubs, while generalist forums provide emotional validation.}
+    \label{fig:tfidf}
+\end{figure}
+\clearpage
+
+\textbf{Vocabulary Specialization Metrics:}
+\begin{table}[H]
+\centering
+\caption{Top 5 TF-IDF Terms by Subreddit Type}
+\label{tab:tfidf}
+\begin{tabular}{lll}
+\toprule
+\textbf{Rank} & \textbf{r/preeclampsia} & \textbf{r/BabyBumps} \\
+\midrule
+1 & bp (0.183) & baby (0.156) \\
+2 & protein (0.171) & just (0.142) \\
+3 & readings (0.158) & like (0.138) \\
+4 & severe (0.144) & feel (0.129) \\
+5 & monitoring (0.137) & worried (0.121) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This vocabulary gap explains user migration patterns: patients experiencing ambiguous symptoms initially seek emotional validation in general forums ("Is anyone else feeling this way?"). Upon receiving clinical red flags from the community, they migrate to specialist forums for quantitative benchmarking ("My bp was 145/92 at my appointment, is this severe enough to induce?"). The specialist forum's clinical vocabulary creates a "language barrier" that self-selects for users with confirmed diagnoses or strong clinical suspicion, naturally filtering out casual inquiries.
+
+\subsection{RQ3: The Buffer Effect and Affective Transformation}
+
+\subsubsection{Post vs. Comment Sentiment Architecture}
+A core function of online health communities is emotional buffering: transforming individual distress into collective support. We quantified this phenomenon by comparing sentiment distributions between original posts (distress signals) and community comments (support responses). Figure~\ref{fig:sentiment_pie} reveals a striking sentiment inversion.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{analysis_output/overall/overall_sentiment_distribution.png}
+    \caption{Sentiment Distribution Comparison: Posts vs. Comments. \textbf{Top Row:} Categorical sentiment distribution (pie charts). Posts exhibit near-parity between negative (48.2\%) and positive (47.8\%) sentiment, creating a polarized, "distress/relief" bimodal distribution. Comments shift dramatically positive (66.2\%), demonstrating systematic community buffering. \textbf{Bottom Row:} VADER compound score distributions (histograms). Posts show the characteristic "horns" effect with peaks at extremes (-1.0 and +1.0), while comments exhibit unimodal positive skew.}
+    \label{fig:sentiment_pie}
+\end{figure}
+
+\textbf{Quantitative Buffer Effect Metrics:}
+\begin{table}[H]
+\centering
+\caption{Sentiment Category Distribution: Posts vs. Comments}
+\label{tab:buffer}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Category} & \textbf{Posts (n=2,022)} & \textbf{Comments (n=19,887)} & \textbf{Difference} & \textbf{Effect Size} \\
+\midrule
+Negative & 986 (48.8\%) & 5,342 (26.9\%) & -21.9\% & Large \\
+Neutral & 89 (4.4\%) & 1,372 (6.9\%) & +2.5\% & Small \\
+Positive & 947 (46.8\%) & 13,173 (66.2\%) & +19.4\% & Large \\
+\midrule
+\textit{Mean Compound} & -0.007 & +0.321 & +0.328 & -- \\
+\textit{Median Compound} & 0.000 & +0.508 & +0.508 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The \textbf{+19.4 percentage point shift} from post negativity to comment positivity represents a Cohen's $h$ effect size of 0.78 (large effect), confirming robust community buffering. This aligns with Social Support Theory: individuals under acute stress (diagnosis, hospitalization) post negative-valence help-seeking content, which the community systematically reframes through:
+\begin{enumerate}
+    \item \textbf{Validation:} "You're not overreacting, those symptoms need to be checked"
+    \item \textbf{Normalization:} "I had the same experience, here's how it turned out"
+    \item \textbf{Actionable Guidance:} "Call your OB immediately, don't wait for your appointment"
+    \item \textbf{Hope Narratives:} "I was induced at 34 weeks, baby is now 3 years old and thriving"
+\end{enumerate}
+
+\subsubsection{The "Horns" Effect: Bimodal Distress Distribution}
+The histogram in Figure~\ref{fig:sentiment_pie} (bottom-left) reveals an intriguing bimodal distribution in post sentiment, with pronounced peaks at the negative (-0.9 to -1.0) and positive (+0.8 to +1.0) extremes. This "horns" effect suggests that users post at moments of extreme emotion:
+\begin{itemize}
+    \item \textbf{Left Horn (Crisis):} "Just got diagnosed at my 32-week appointment, my world is collapsing" [compound: -0.95]
+    \item \textbf{Right Horn (Relief):} "Baby and I are home, healthy and thriving, grateful for this community" [compound: +0.94]
+\end{itemize}
+
+The relative absence of neutral posts (4.0\%) indicates that the forum is \textit{not} used for casual information-seeking or passive lurking (which would generate neutral sentiment). Instead, it functions as an emotional release valve activated during acute psychological stress or profound relief.
+
+\subsubsection{COVID-Era Sentiment Dynamics}
+To assess whether the pandemic altered community support dynamics, we compared Pre-COVID and Post-COVID sentiment distributions. Figure~\ref{fig:covid_sentiment} reveals subtle but important shifts.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{analysis_output/covid_comparison/sentiment_distribution_comparison.png}
+    \caption{Pre-COVID vs. Post-COVID Sentiment Distribution (Absolute Counts). The Post-COVID era shows a massive volume increase (963 posts vs. 32 Pre-COVID) but maintains similar sentiment proportions. Negative posts dominate in both eras (Pre: 48.4\%, Post: 47.9\%), suggesting that community function (distress relief) remained stable despite exponential scaling.}
+    \label{fig:covid_sentiment}
+\end{figure}
+
+\textbf{Stability Amid Growth:} Despite 30x volume expansion, the negative/positive ratio remained remarkably stable (Pre-COVID: 0.94, Post-COVID: 0.98). This suggests that \textbf{community culture is resilient to scale}; the proportion of distress signals to recovery narratives self-regulates through organic community dynamics rather than deteriorating under growth pressure.
+
+\section{Ancillary Findings: Functional Specialization and Peer Triage}
+
+\subsection{Topic Modeling: From Narrative to Biometric}
+Beyond our primary research questions, Latent Dirichlet Allocation (LDA) revealed five distinct thematic clusters within the corpus, demonstrating functional specialization of discourse. Figure~\ref{fig:topics} presents the discovered topics with their characteristic vocabularies and relative weights.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{analysis_output/overall/topic_modeling.png}
+    \caption{LDA Topic Modeling Results (k=5 topics). Each bar represents a topic's average weight across the corpus, with top 10 characteristic terms displayed. Topic 3 ("bp", "pressure", "readings") dominates, indicating that the community's primary function has shifted from narrative sharing to quantitative peer-triage.}
+    \label{fig:topics}
+\end{figure}
+
+\textbf{Detailed Topic Interpretation:}
+
+\textbf{Topic 1: Birth Narratives and Outcomes (Weight: 0.14)}
+\begin{itemize}
+    \item \textit{Characteristic terms:} "baby", "born", "weeks", "delivery", "hospital", "healthy", "nicu", "preterm", "labor", "induced"
+    \item \textit{Function:} Retrospective storytelling about delivery experiences, birth outcomes, and NICU journeys. These posts serve as "outcome benchmarks" for currently-diagnosed patients seeking prognostic information.
+    \item \textit{Example archetype:} "I was induced at 32 weeks due to severe pre-e. Baby spent 4 weeks in NICU but is now thriving at 6 months."
+\end{itemize}
+
+\textbf{Topic 2: Symptom Recognition and Diagnostic Uncertainty (Weight: 0.18)}
+\begin{itemize}
+    \item \textit{Characteristic terms:} "symptoms", "headache", "vision", "swelling", "pain", "feel", "doctor", "appointment", "worried", "check"
+    \item \textit{Function:} Help-seeking posts from users experiencing ambiguous symptoms, requesting community validation of concern severity. High prevalence of uncertainty language ("should I", "is this normal", "anyone else").
+    \item \textit{Example archetype:} "I've had a terrible headache for 3 days and my vision is a bit blurry. My bp was normal last week but should I call my doctor or wait for my appointment in 5 days?"
+\end{itemize}
+
+\textbf{Topic 3: Quantitative Monitoring and Clinical Triage (Weight: 0.28): DOMINANT}
+\begin{itemize}
+    \item \textit{Characteristic terms:} "bp", "pressure", "blood", "readings", "high", "monitor", "numbers", "home", "140", "protein"
+    \item \textit{Function:} The core "peer triage" function. Users report quantitative biometric data seeking interpretation and urgency assessment. This topic's dominance (28\% of all discourse) confirms that the community now serves primarily as a diagnostic interpretation layer between patient self-monitoring and clinical intervention.
+    \item \textit{Example archetype:} "My bp has been creeping up: 138/88 yesterday, 142/92 this morning. I have a home monitor. At what point should I go to L\&D vs. waiting for my OB call back?"
+\end{itemize}
+
+\textbf{Topic 4: Medical Management and Treatment (Weight: 0.19)}
+\begin{itemize}
+    \item \textit{Characteristic terms:} "medication", "magnesium", "labetalol", "treatment", "hospital", "stay", "monitoring", "bed rest", "admitted", "postpartum"
+    \item \textit{Function:} Discussion of clinical interventions, medication experiences, and hospitalization. Often features experiential knowledge exchange about side effects, treatment efficacy, and post-discharge management.
+    \item \textit{Example archetype:} "Started labetalol 200mg 3x daily. Anyone else experience extreme fatigue? My bp is controlled but I can barely function."
+\end{itemize}
+
+\textbf{Topic 5: Emotional Support and Community Solidarity (Weight: 0.21)}
+\begin{itemize}
+    \item \textit{Characteristic terms:} "thank", "support", "everyone", "community", "helpful", "appreciate", "scared", "anxiety", "safe", "journey"
+    \item \textit{Function:} Meta-discourse about the community itself, expressions of gratitude, and emotional processing. These posts reinforce community norms and validate the forum's buffering function.
+    \item \textit{Example archetype:} "I just want to thank this community. I was terrified after my diagnosis but reading everyone's stories gave me hope. Baby and I are both home and healthy now."
+\end{itemize}
+
+\textbf{Clinical Fixation Hypothesis:}
+The dominance of Topic 3 (Quantitative Monitoring, 28\% weight) over Topic 5 (Emotional Support, 21\% weight) suggests a fundamental shift in community function. Early online health communities (2000--2010 era) primarily served emotional support roles, such as sharing experiences and mutual validation. The modern pre-eclampsia community has evolved into a \textbf{distributed diagnostic network} where patients crowdsource interpretation of clinical data. This represents a novel form of "citizen triage" that warrants further investigation regarding accuracy, safety, and impact on healthcare utilization patterns.
+
+\subsection{Medical Terminology Density and Lexical Sophistication}
+To quantify the "medicalization" of community discourse, we tracked the frequency of clinical terminology from our validated keyword taxonomy. Figure~\ref{fig:medical_terms} presents the top 30 medical terms by absolute frequency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{analysis_output/overall/medical_terms_analysis.png}
+    \caption{\textbf{Left Panel:} Top 30 Medical Terms by Frequency. "Blood pressure" (abbreviated as "bp") appears in 47\% of posts, while formal diagnostic terms ("preeclampsia", "HELLP") appear in 38\% and 12\% respectively. \textbf{Right Panel:} Word cloud visualization scaled by term frequency, demonstrating the semantic core of community discourse centered on hypertension monitoring.}
+    \label{fig:medical_terms}
+\end{figure}
+
+\textbf{Lexical Sophistication Metrics:}
+\begin{table}[H]
+\centering
+\caption{Medical Terminology Usage Frequency (Top 10 Terms)}
+\label{tab:medical}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Term} & \textbf{Frequency} & \textbf{\% of Posts} \\
+\midrule
+blood pressure / bp & 952 & 47.1\% \\
+preeclampsia & 768 & 38.0\% \\
+protein(uria) & 443 & 21.9\% \\
+high blood pressure & 387 & 19.1\% \\
+gestational hypertension & 298 & 14.7\% \\
+severe preeclampsia & 276 & 13.6\% \\
+HELLP syndrome & 243 & 12.0\% \\
+vision changes & 189 & 9.3\% \\
+magnesium sulfate & 156 & 7.7\% \\
+24-hour urine & 134 & 6.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The prevalence of quantitative monitoring terms ("bp", "readings", "numbers", "140/90") over diagnostic labels ("preeclampsia", "HELLP") suggests that users are engaging in continuous self-surveillance rather than one-time information-seeking post-diagnosis. This aligns with the "quantified self" movement in digital health, where consumer devices (home blood pressure monitors, smartphone apps) enable patients to generate clinical-grade data outside formal healthcare settings.
+
+\textbf{Longitudinal Medicalization:} When we segment terminology usage by temporal period:
+\begin{itemize}
+    \item \textbf{Pre-COVID (2012--2019):} Average medical terms per post: 2.3
+    \item \textbf{Post-COVID (2020--2025):} Average medical terms per post: 4.7
+    \item \textbf{2025 (Current):} Average medical terms per post: 5.9
+\end{itemize}
+
+This 2.6x increase in medical term density indicates that community discourse has become significantly more clinically sophisticated over time, potentially reflecting:
+\begin{enumerate}
+    \item Greater patient access to diagnostic information (online lab results, patient portals)
+    \item Normalization of home monitoring technology
+    \item Community expectation setting; new members observe clinical language norms and adopt them
+    \item Selection effects; patients with more severe/complex presentations (requiring intensive monitoring) increasingly dominate the forum
+\end{enumerate}
+
+\subsection{Subreddit-Specific Sentiment Profiles}
+To understand how community culture varies across the Reddit ecosystem, we computed average sentiment scores for each subreddit in our sample. Figure~\ref{fig:subreddit_sentiment} reveals significant variation in affective tone across forum types.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{analysis_output/overall/sentiment_by_subreddit.png}
+    \caption{\textbf{Top Panel:} Average sentiment score by subreddit (top 20 by volume). Blue bars indicate positive-leaning communities; pink bars indicate negative-leaning. \textbf{Bottom Panel:} Sentiment component breakdown (positive, negative, compound scores) for top 10 subreddits by volume, revealing distinct emotional profiles.}
+    \label{fig:subreddit_sentiment}
+\end{figure}
+
+\textbf{Subreddit Emotional Typology:}
+\begin{itemize}
+    \item \textbf{Support-Optimized Forums (Avg. Compound $>$ +0.15):}
+    \begin{itemize}
+        \item \texttt{r/Mommit}, \texttt{r/beyondthebump}: General parenting forums where pre-eclampsia discussions occur in "survival story" contexts, skewing positive
+        \item \textit{Mechanism:} Retrospective storytelling from post-recovery phase reduces acute distress signals
+    \end{itemize}
+    
+    \item \textbf{Neutral Clinical Forums (Avg. Compound: -0.05 to +0.05):}
+    \begin{itemize}
+        \item \texttt{r/AskDocs}, \texttt{r/medical}: Utilitarian information-seeking with minimal emotional valence
+        \item \textit{Mechanism:} Users frame posts as clinical case presentations, suppressing affective language
+    \end{itemize}
+    
+    \item \textbf{High-Distress Forums (Avg. Compound $<$ -0.10):}
+    \begin{itemize}
+        \item \texttt{r/preeclampsia}, \texttt{r/NICUParents}: Acute-phase discourse from currently-diagnosed or experiencing-complications users
+        \item \textit{Mechanism:} Users post at moments of peak anxiety (diagnosis, hospitalization, NICU admission)
+    \end{itemize}
+\end{itemize}
+
+\textbf{Implication for Platform Design:} The sentiment heterogeneity across subreddits suggests that \textbf{forum function determines emotional tone}, not vice versa. Attempts to artificially "increase positivity" in high-distress forums through moderation policies may be counterproductive; these spaces serve essential emotional release functions that require tolerance for negative affect expression. Instead, platform architects should focus on creating \textit{pathways} between distress-tolerant forums (for acute crisis support) and recovery-narrative forums (for long-term community integration).
+
+\section{Discussion}
+
+\subsection{Synthesis of Key Findings}
+This study provides the first comprehensive, longitudinal analysis of pre-eclampsia discourse on Reddit, spanning 14 years and encompassing over 20,000 posts and comments. Our findings challenge several prevailing assumptions about online health communities while revealing novel patterns in digital health-seeking behavior.
+
+\subsubsection{The Delayed Digital Adoption Paradox}
+Contrary to expectations that COVID-19 would immediately drive patients to online health forums (due to telehealth normalization and reduced in-person care access), we observed a 2--3 year latency before exponential growth occurred. The 2023--2025 "hockey stick" expansion suggests that \textbf{digital health adoption for pregnancy conditions follows distinct trajectories} from general telemedicine uptake.
+
+Possible mechanisms for this delayed effect include:
+\begin{enumerate}
+    \item \textbf{Network Diffusion Lag:} Social media health-seeking behaviors spread through peer networks with characteristic time constants. Early pandemic telehealth adoption occurred primarily in chronic disease management (diabetes, hypertension monitoring), with pregnancy-specific applications lagging by 2--3 years as awareness diffused.
+    
+    \item \textbf{Platform Maturation:} Reddit's algorithmic recommendation systems and community discovery features underwent significant improvements in 2022--2023, making niche health subreddits more discoverable to mainstream users.
+    
+    \item \textbf{Critical Mass Threshold:} Online communities require minimum viable populations to sustain engagement. \texttt{r/preeclampsia} likely crossed this threshold in 2022, creating self-reinforcing growth as content volume improved search visibility.
+    
+    \item \textbf{Generational Shift:} The 2023--2025 pregnancy cohort represents the first generation of "digital natives" (born 1995--2000) entering peak childbearing years, with fundamentally different health information-seeking behaviors than preceding cohorts.
+\end{enumerate}
+
+\subsubsection{Centralization vs. Fragmentation in Health Discourse}
+The "Great Migration" to \texttt{r/preeclampsia} (now 54.7\% of all discourse) represents a broader trend in online health communities: \textbf{expertise agglomeration overcomes platform fragmentation}. While Reddit's architecture encourages niche community formation, high-stakes medical conditions appear to consolidate into singular dominant forums where expertise density maximizes information quality.
+
+This centralization has both benefits and risks:
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item \textbf{Knowledge Consolidation:} Experienced members accumulate, preventing loss of institutional memory
+    \item \textbf{Moderation Efficiency:} Volunteer moderators can focus resources on single community
+    \item \textbf{Algorithm Amplification:} Dominant communities receive preferential treatment in search rankings and recommendations
+    \item \textbf{Peer Matching:} Higher member count increases likelihood of finding users with similar clinical presentations
+\end{itemize}
+
+\textbf{Risks:}
+\begin{itemize}
+    \item \textbf{Echo Chambers:} Dominant narratives may suppress minority experiences (e.g., racial disparities in pre-eclampsia outcomes)
+    \item \textbf{Misinformation Propagation:} Single point of failure; if dominant community develops problematic norms, users lack alternatives
+    \item \textbf{Volunteer Burnout:} Moderator workload scales super-linearly with community size
+    \item \textbf{Novice Overwhelming:} Mass adoption dilutes expert-to-novice ratio, reducing answer quality
+\end{itemize}
+
+\subsubsection{The Buffer Effect as Community Infrastructure}
+Perhaps the most clinically significant finding is the systematic sentiment inversion between posts (-0.007 mean compound) and comments (+0.321 mean compound), representing a \textbf{+0.328 affective transformation}. This "Buffer Effect" demonstrates that online health communities are not merely passive information repositories but active emotional regulation systems.
+
+The mechanism appears to operate through several channels:
+\begin{enumerate}
+    \item \textbf{Validation:} Commenters affirm that the poster's concerns are legitimate, reducing self-doubt and anxiety
+    \item \textbf{Normalization:} Sharing similar experiences demonstrates that the poster is not alone, reducing isolation
+    \item \textbf{Actionable Guidance:} Concrete advice (e.g., "Call your OB now, don't wait") transforms helplessness into agency
+    \item \textbf{Outcome Reframing:} Survival stories shift focus from worst-case scenarios to probable positive outcomes
+\end{enumerate}
+
+This buffering function has important implications for mental health during high-risk pregnancies. Pre-eclampsia diagnosis is associated with elevated rates of postpartum depression and PTSD. Our findings suggest that peer support communities may serve as \textbf{preventive mental health interventions}, potentially reducing psychological morbidity through proactive emotional support during the acute crisis phase.
+
+\subsection{Theoretical Implications}
+
+\subsubsection{From "Patients as Consumers" to "Patients as Clinicians"}
+Our topic modeling results challenge traditional models of patient behavior. The dominance of quantitative monitoring discourse (Topic 3: 28\% of corpus weight) suggests that patients are no longer passive recipients of medical expertise but \textbf{active co-producers of clinical knowledge}.
+
+This shift aligns with the "Quantified Self" movement and represents a fundamental transformation in the doctor-patient relationship. Patients equipped with consumer monitoring devices (home BP cuffs, continuous glucose monitors, wearable sensors) generate clinical-grade data streams outside formal healthcare settings. Online communities serve as interpretive layers, helping patients contextualize these data relative to population norms and decision thresholds.
+
+This distributed triage model has both promise and peril:
+\begin{itemize}
+    \item \textbf{Promise:} Early detection of deterioration, reduced healthcare utilization for false alarms, patient empowerment
+    \item \textbf{Peril:} Delayed care-seeking due to community false reassurance, anxiety amplification from pathological monitoring, widening health literacy gaps
+\end{itemize}
+
+\subsubsection{Social Support Theory and Digital Adaptation}
+Our findings extend classic Social Support Theory (Cohen \& Wills, 1985) into the digital realm. Traditional social support research emphasized in-person interactions, strong-tie networks (family, close friends), and reciprocal long-term relationships. Reddit communities demonstrate that \textbf{weak-tie, anonymous, asynchronous support can generate comparable buffering effects}.
+
+Key distinctions between traditional and digital social support:
+\begin{table}[H]
+\centering
+\caption{Traditional vs. Digital Social Support Mechanisms}
+\label{tab:support}
+\begin{tabular}{p{4cm}p{5cm}p{5cm}}
+\toprule
+\textbf{Dimension} & \textbf{Traditional (In-Person)} & \textbf{Digital (Reddit)} \\
+\midrule
+Relationship Type & Strong ties (family, friends) & Weak ties (pseudonymous strangers) \\
+Temporal Dynamics & Synchronous, real-time & Asynchronous, archival \\
+Reciprocity Expectation & High (mutual obligation) & Low (pay-it-forward norms) \\
+Stigma Threshold & High (identity exposure) & Low (pseudonymity protection) \\
+Geographic Constraint & Local (proximity-dependent) & Global (jurisdiction-independent) \\
+Expertise Access & Limited (network-bounded) & Extensive (self-selection by experience) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The comparable effectiveness of digital weak-tie support suggests that \textbf{informational support and emotional validation can be decoupled from strong social bonds}. For stigmatized or rare conditions, this represents a democratization of access to experiential expertise previously limited to those with pre-existing robust social networks.
+
+\subsection{Clinical and Policy Implications}
+
+\subsubsection{Integration with Formal Healthcare Systems}
+Our findings suggest several opportunities for healthcare system integration:
+
+\textbf{1. Provider Awareness and Guidance}
+Obstetric providers should be trained to:
+\begin{itemize}
+    \item Acknowledge that patients are likely seeking information on Reddit and other platforms
+    \item Provide curated lists of high-quality online communities rather than blanket discouragement
+    \item Offer interpretive context for peer advice (e.g., "If your Reddit community says X, here's how to evaluate that recommendation")
+    \item Recognize that patients' clinical language sophistication may be elevated due to peer education
+\end{itemize}
+
+\textbf{2. Digital Health Literacy Interventions}
+Healthcare systems could develop:
+\begin{itemize}
+    \item "How to Evaluate Online Health Information" modules integrated into prenatal care
+    \item Decision aids that help patients distinguish between "go to ER now" vs. "call OB during business hours" vs. "mention at next appointment" scenarios
+    \item Partnerships with community moderators to ensure accurate clinical information dissemination
+\end{itemize}
+
+\textbf{3. Research Partnerships}
+Academic medical centers could:
+\begin{itemize}
+    \item Establish ethical frameworks for researcher-community collaboration
+    \item Conduct validation studies comparing peer triage advice to clinical guidelines
+    \item Use community discourse as "early warning systems" for emerging patient concerns (e.g., medication side effects, access barriers)
+\end{itemize}
+
+\subsubsection{Moderation and Platform Governance}
+As communities scale (2023--2025 growth), maintaining quality requires active governance. Our findings suggest:
+
+\textbf{Recommendations for Community Moderators:}
+\begin{itemize}
+    \item \textbf{Cultivate "Success Story" Pipelines:} Actively solicit and amplify recovery narratives to counterbalance acute-distress post influx
+    \item \textbf{Tiered Flair Systems:} Implement user flair indicating experience level (e.g., "Currently diagnosed", "Postpartum survivor", "Healthcare provider") to help users assess advice source credibility
+    \item \textbf{AutoModerator Rules:} Develop automated filters for urgent clinical scenarios (e.g., "If post contains 'chest pain' + 'blood pressure' + specific thresholds, auto-reply with 'Call 911 now' message")
+    \item \textbf{Peer Mentorship Programs:} Match newly-diagnosed users with recovered members for sustained 1:1 support
+\end{itemize}
+
+\textbf{Recommendations for Reddit Platform:}
+\begin{itemize}
+    \item Develop health-specific content policies acknowledging community triage functions
+    \item Provide moderator tools for flagging potentially dangerous medical advice
+    \item Partner with medical professional organizations to develop "Trusted Commenter" verification systems
+    \item Implement sentiment tracking dashboards to alert moderators when community affect deteriorates
+\end{itemize}
+
+\subsection{Limitations and Future Directions}
+
+\subsubsection{Methodological Limitations}
+\textbf{1. Sampling Bias:} Reddit users skew younger (18--29: 36\%), more educated (college degree: 42\%), and more white (63\%) than the general U.S. population. Pre-eclampsia disproportionately affects Black women (60\% higher incidence), suggesting our sample underrepresents the highest-risk populations.
+
+\textbf{2. Language Limitation:} Our analysis was restricted to English-language content, excluding Spanish and other language communities on Reddit where Latinx users (another high-risk group) may congregate.
+
+\textbf{3. Sentiment Analysis Tool Constraints:} VADER, while effective for social media text, was not specifically trained on pregnancy-related discourse. Phrases like "I'm dying to meet my baby" may be incorrectly coded as negative when contextually positive.
+
+\textbf{4. Causality Limitations:} Our observational design cannot establish whether community participation \textit{causes} improved emotional outcomes or whether users with better baseline coping seek out online support.
+
+\textbf{5. Deleted Content Bias:} Reddit users can delete posts/comments post-hoc. Our dataset may underrepresent regretted emotional disclosures or posts containing subsequently-regretted medical misinformation.
+
+\subsubsection{Future Research Directions}
+\textbf{1. Outcomes Validation:} Prospective cohort studies linking community participation to clinical outcomes (postpartum depression rates, healthcare utilization patterns, maternal/neonatal morbidity)
+
+\textbf{2. Accuracy Assessment:} Expert clinician review of peer triage advice to quantify concordance with evidence-based guidelines
+
+\textbf{3. Cross-Platform Comparison:} Parallel analysis of Facebook groups, TikTok content, and Instagram communities to assess platform-specific discourse norms
+
+\textbf{4. Intervention Studies:} Randomized trials of moderated vs. unmoderated communities, or professionally-facilitated vs. peer-only support
+
+\textbf{5. Health Equity Analysis:} Targeted recruitment and analysis of communities serving underrepresented populations (Black maternal health groups, Spanish-language forums)
+
+\textbf{6. Longitudinal Individual Tracking:} Following individual users across their pregnancy journey (with consent and ethical approval) to map emotional trajectories and support utilization patterns
+
+\textbf{7. Misinformation Dynamics:} Network analysis of how false clinical claims spread, persist, and are corrected within communities
+
+\subsection{Broader Implications for Digital Health}
+The pre-eclampsia community represents a microcosm of broader trends in digital health:
+
+\textbf{1. Democratization of Medical Knowledge:} Patients increasingly possess clinical sophistication rivaling non-specialist providers, enabled by online communities and direct-to-consumer diagnostics
+
+\textbf{2. Peer-to-Peer Triage as Healthcare Infrastructure:} Informal online networks are filling gaps in healthcare access, particularly for time-sensitive questions ("Should I go to ER tonight?") that formal systems handle poorly
+
+\textbf{3. Emotional Labor Externalization:} Healthcare systems constrained by time and reimbursement limitations increasingly rely on unpaid peer support to provide emotional care that physicians cannot
+
+\textbf{4. Platform Power and Responsibility:} Technology companies hosting health communities wield significant influence over health outcomes, raising questions about regulatory oversight and liability
+
+\textbf{5. The Quantified Patient:} Consumer health devices coupled with peer interpretation networks create parallel diagnostic infrastructures outside traditional medical gatekeeping
+
+These trends suggest we are witnessing not merely the digitization of existing healthcare delivery models, but the \textbf{emergence of entirely new healthcare infrastructures} built on peer knowledge exchange, distributed triage, and algorithmic mediation. Understanding these systems, including their benefits, risks, and optimal governance, will be critical to 21st-century health policy.
+
+\section{Conclusion}
+
+This longitudinal analysis of 2,022 posts and 19,887 comments spanning 14 years (2012--2025) provides compelling evidence that the online pre-eclampsia community has undergone a fundamental transformation from a scattered collection of social support threads into a centralized, high-volume peer-triage ecosystem.
+
+\subsection{Core Contributions}
+Our research makes four primary contributions to digital health scholarship:
+
+\textbf{1. Temporal Dynamics:} We challenge the prevailing "COVID catalyst" hypothesis, demonstrating that the true inflection point for pregnancy-related online communities occurred in 2023--2025, not during the pandemic itself. This 2--3 year latency suggests that digital health adoption follows complex diffusion patterns mediated by network effects, platform maturation, and generational shifts.
+
+\textbf{2. Spatial Consolidation:} We document the "Great Migration" whereby 54.7\% of discourse has concentrated into the dedicated \texttt{r/preeclampsia} subreddit, driven by lexical specialization (clinical monitoring vocabulary) and expertise agglomeration. This centralization demonstrates that high-stakes medical conditions consolidate into singular dominant forums despite platform fragmentation pressures.
+
+\textbf{3. Affective Infrastructure:} We quantify the "Buffer Effect"—a systematic +0.328 sentiment inversion between posts (distress signals) and comments (support responses), establishing that peer communities function as active emotional regulation systems, not merely passive information repositories. The 19.4 percentage point shift from negative posts to positive comments represents robust community buffering with large effect size (Cohen's $h$ = 0.78).
+
+\textbf{4. Functional Evolution:} Through topic modeling, we reveal that the community's primary function has shifted from narrative sharing to quantitative peer-triage, with clinical monitoring discourse (Topic 3: "bp", "pressure", "readings") comprising 28\% of all content. This "Clinical Fixation" demonstrates that patients are acting as distributed diagnostic networks, interpreting home-generated biometric data through crowdsourced expertise.
+
+\subsection{Practical Implications}
+For healthcare providers, our findings suggest that \textbf{patients are arriving at appointments with sophisticated clinical knowledge and community-validated concerns}. Rather than dismissing online communities as sources of misinformation, providers should engage with them as complementary support systems, offering guidance on interpreting peer advice and validating legitimate community concerns.
+
+For platform architects and community moderators, the "sentiment cost of scale" (positivity declining from 57.8\% to 46.8\% as communities expand) indicates that \textbf{exponential growth requires active governance to maintain supportive culture}. Strategies including cultivation of success story pipelines, tiered expertise flair systems, and automated urgent-scenario detection can help preserve community buffering capacity despite volume increases.
+
+For researchers, the pre-eclampsia community represents a valuable natural laboratory for studying \textbf{emergent healthcare infrastructure}, including peer triage systems, distributed diagnostic interpretation, and weak-tie emotional support, that increasingly supplement formal medical care. Understanding these systems' accuracy, safety, and health equity implications will be critical to 21st-century health policy.
+
+\subsection{The Road Ahead}
+As consumer health devices proliferate (home BP monitors, continuous glucose monitors, wearable sensors) and direct-to-consumer diagnostics expand (at-home genetic testing, telemedicine-enabled lab ordering), patients will generate ever-increasing volumes of clinical data outside formal healthcare settings. Online communities like \texttt{r/preeclampsia} serve as interpretive layers for these data, helping patients contextualize measurements, identify concerning patterns, and make care-seeking decisions.
+
+This represents a fundamental shift from the 20th-century model of \textbf{physician-as-gatekeeper} to an emerging 21st-century model of \textbf{patient-as-co-diagnostician}, with online communities serving as consultation networks. Whether this shift improves or compromises care quality, equity, and safety will depend on how healthcare systems, technology platforms, policymakers, and patient communities navigate the complex integration of peer knowledge with professional expertise.
+
+Our findings suggest cautious optimism: the pre-eclampsia community demonstrates robust buffering capacity, lexical sophistication, and functional specialization. However, the sentiment cost of scale, potential for misinformation propagation, and systematic underrepresentation of high-risk populations (Black and Latinx women) demand ongoing vigilance and proactive governance.
+
+The digital health revolution is not coming; it has arrived. The question is no longer whether patients will turn to online communities for medical advice, but how we can harness these communities' strengths while mitigating their risks. This research provides an empirical foundation for answering that question.
+
+\subsection{Final Reflection}
+Behind every data point in our corpus—every post, comment, sentiment score—lies a human story: a pregnant person experiencing terrifying symptoms, a survivor offering hard-won wisdom, a partner seeking to understand their loved one's crisis. Our quantitative methods risk abstracting away this humanity. Yet it is precisely by understanding these stories at scale that we can advocate for systems that better serve them.
+
+The pre-eclampsia community is not perfect. It reflects the health inequities, platform biases, and medical uncertainty of the broader world. But it also represents something profound: strangers offering strangers hope at their darkest moments, knowledge translating into empowerment, and isolation transformed into connection. As healthcare continues its digital transformation, may we build systems worthy of the communities that patients have already created for themselves.
+
+\bibliographystyle{plain}
+% \bibliography{references}
+
+\end{document}

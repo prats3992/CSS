@@ -1,25 +1,25 @@
 # Quick Start Guide - EDA Pipeline
 
-## 🚀 Getting Started (5 minutes)
+## Getting Started (5 minutes)
 
-### Step 1: Verify Setup
-```powershell
-python test_eda_setup.py
-```
-This checks if all dependencies are installed correctly.
-
-### Step 2: Run Complete Analysis
+### Step 1: Run Complete Analysis
 ```powershell
 python run_eda.py
 ```
 This will:
-- ✓ Load data from Firebase
-- ✓ Clean and preprocess
-- ✓ Perform sentiment analysis
-- ✓ Generate 18+ visualizations
-- ✓ Create HTML report
+- Load data from Firebase
+- Clean and preprocess
+- Perform sentiment analysis
+- Generate 18+ visualizations
+- Create HTML report
 
 **Estimated time**: 5-15 minutes (depends on data size)
+
+### Step 2: Compile Final Report
+```powershell
+pdflatex final_report.tex
+```
+This will generate the final PDF report (`final_report.pdf`) incorporating the latest analysis results.
 
 ### Step 3: View Results
 Open the generated report:
@@ -33,7 +33,7 @@ start analysis_output/analysis_report.html
 
 ---
 
-## 📊 What You'll Get
+## What You'll Get
 
 ### Cleaned Data
 - `cleaned_data/cleaned_posts.csv` - Ready-to-analyze posts
@@ -66,10 +66,11 @@ start analysis_output/analysis_report.html
 
 ### Report
 - `analysis_output/analysis_report.html` - Interactive HTML report with all visualizations
+- `final_report.pdf` - Final academic paper
 
 ---
 
-## ⚙️ Common Commands
+## Common Commands
 
 ### Run Individual Analyses
 
@@ -115,16 +116,16 @@ print(yearly_sentiment)
 
 ---
 
-## 🔍 Analyses Checklist
+## Analyses Checklist
 
-### ✅ Temporal Trends
+### Temporal Trends
 - [x] Sentiment trend over the years
 - [x] Post volume over the years (colored by sentiment)
 - [x] % positive posts by year
 - [x] Year over year sentiment change
 - [x] Year over year change in wordcloud
 
-### ✅ Pre vs Post COVID
+### Pre vs Post COVID
 - [x] Sentiment distribution
 - [x] Avg VADER score
 - [x] Post volume difference
@@ -132,34 +133,34 @@ print(yearly_sentiment)
 - [x] Post distribution across subreddits
 - [x] Wordcloud difference
 
-### ✅ Overall
+### Overall
 - [x] Sentiment distribution
 - [x] Avg sentiment by subreddit
-- [x] TF-IDF inclusion → topic modeling
+- [x] TF-IDF inclusion -> topic modeling
 - [x] Subreddit comparison
 - [x] Wordcloud of medical terms being used
 
 ---
 
-## 📁 Output Structure
+## Output Structure
 
 ```
 analysis_output/
-├── analysis_report.html          # 📄 Main report
-├── temporal/                     # 📈 5 visualizations
+├── analysis_report.html          # Main report
+├── temporal/                     # 5 visualizations
 │   ├── sentiment_trend_over_years.png
 │   ├── post_volume_by_sentiment.png
 │   ├── positive_percentage_by_year.png
 │   ├── yoy_sentiment_change.png
 │   └── wordcloud_by_year.png
-├── covid_comparison/             # 🦠 6 visualizations
+├── covid_comparison/             # 6 visualizations
 │   ├── sentiment_distribution_comparison.png
 │   ├── vader_score_comparison.png
 │   ├── post_volume_comparison.png
 │   ├── sentiment_score_distributions.png
 │   ├── subreddit_distribution_comparison.png
 │   └── wordcloud_comparison.png
-└── overall/                      # 🔬 6 visualizations + 3 CSVs
+└── overall/                      # 6 visualizations + 3 CSVs
     ├── overall_sentiment_distribution.png
     ├── sentiment_by_subreddit.png
     ├── tfidf_top_terms.png
@@ -181,7 +182,7 @@ cleaned_data/
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Error: "No posts data available"
 **Solution**: Run data collection first:
@@ -212,7 +213,7 @@ matplotlib.use('Agg')  # Non-interactive backend
 
 ---
 
-## 💡 Tips
+## Tips
 
 1. **First Run**: May take 10-15 minutes depending on data size
 2. **Subsequent Runs**: Use cached cleaned data for faster analysis
@@ -222,7 +223,7 @@ matplotlib.use('Agg')  # Non-interactive backend
 
 ---
 
-## 📊 Key Metrics in Report
+## Key Metrics in Report
 
 - **Total Posts**: Count of analyzed posts
 - **Total Comments**: Count of analyzed comments
@@ -233,7 +234,7 @@ matplotlib.use('Agg')  # Non-interactive backend
 
 ---
 
-## 🎯 Next Steps After EDA
+## Next Steps After EDA
 
 1. **Review HTML Report**: Get overview of all findings
 2. **Check CSVs**: Use cleaned data for custom analyses
@@ -244,7 +245,7 @@ matplotlib.use('Agg')  # Non-interactive backend
 
 ---
 
-## ✅ Verification Checklist
+## Verification Checklist
 
 Before running analysis, ensure:
 - [ ] Firebase connection configured
